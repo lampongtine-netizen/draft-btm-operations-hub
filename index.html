@@ -401,6 +401,16 @@
   .comms-reply{ display:flex; gap:8px; border-top:1px solid var(--border-soft); padding-top:12px; }
   .comms-reply input{ flex:1; background:var(--surface-raised); border:1px solid var(--border); border-radius:20px; padding:9px 15px; color:var(--text); font-size:13px; outline:none; }
   .comms-reply input:focus{ border-color:var(--gold); }
+
+  .comms-login{max-width:460px;margin:30px auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-m);padding:24px;}
+  .comms-login h2{margin:0 0 6px;font-size:18px;}
+  .comms-login p{color:var(--text-dim);font-size:12.5px;line-height:1.5;margin:0 0 18px;}
+  .comms-login .field{margin-bottom:12px;}
+  .comms-login label{display:block;font-size:11px;color:var(--text-faint);margin-bottom:5px;}
+  .comms-login input{width:100%;box-sizing:border-box;background:var(--surface-raised);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);outline:none;}
+  .comms-login input:focus{border-color:var(--gold);}
+  .comms-loading{padding:40px;text-align:center;color:var(--text-faint);font-size:13px;}
+  .comms-error{padding:18px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-m);color:var(--text-dim);font-size:12.5px;line-height:1.5;}
   .conn-banner{
     display:flex; align-items:center; gap:12px; background:var(--surface); border:1px solid var(--border);
     border-radius:var(--radius-m); padding:12px 16px; margin-bottom:18px;
@@ -434,10 +444,9 @@
 <script>
 /* =========================================================
    BTM OPERATIONS HQ — Phase 1 (Core Operations)
-   All data below is clearly labeled DEMO data for development.
-   No live Shopify / Stripe / Calendar / student-platform
-   integration exists yet — those are Phase 3/4, pending
-   credentials BTM has not provided.
+   Most operational data below remains DEMO data for development.
+   Communications is connected to the live BTM messaging API when configured.
+   Shopify / Stripe / Calendar / student-platform integrations remain pending.
    ========================================================= */
 
 // ---------- DEMO DATA ----------
@@ -1244,63 +1253,145 @@ function renderCalls(){
 }
 
 function commsSortWeight(c){
-  if(c.comms.status==='unread') return 0;
-  if(c.comms.status==='unanswered') return 1;
-  if(c.comms.status==='answered') return 2;
-  return 3;
+  if(c.unread_for_admin) return 0;
+  if(c.status==='pending') return 1;
+  return 2;
 }
-function renderCommunications(){
-  const list = customers.slice().filter(c=>c.comms.thread.length || c.comms.status!=='none')
-    .sort((a,b)=> commsSortWeight(a)-commsSortWeight(b));
-  const openId = state.commsOpenId || (list[0] && list[0].id);
-  const open = findCustomer(openId);
 
+let liveComms = {
+  loaded:false,
+  loading:false,
+  authenticated:false,
+  email:null,
+  error:null,
+  conversations:[],
+  open:null,
+  openMessages:[]
+};
+
+function esc(value){
+  return String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+}
+
+function formatCommsTime(value){
+  if(!value) return '';
+  const d = new Date(value);
+  if(Number.isNaN(d.getTime())) return esc(value);
+  return d.toLocaleString([], {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
+}
+
+async function commsRequest(url, options={}){
+  const response = await fetch(url, {credentials:'same-origin', ...options, headers:{'Content-Type':'application/json', ...(options.headers||{})}});
+  let data = {};
+  try { data = await response.json(); } catch {}
+  if(!response.ok) throw new Error(data.error || `Request failed (${response.status})`);
+  return data;
+}
+
+async function loadLiveCommunications(){
+  if(liveComms.loading) return;
+  liveComms.loading = true;
+  liveComms.error = null;
+  try{
+    const me = await commsRequest('/api/auth/me');
+    liveComms.authenticated = !!me.authenticated;
+    liveComms.email = me.email || null;
+    if(!liveComms.authenticated){
+      liveComms.loaded = true;
+      return;
+    }
+    const rows = await commsRequest('/api/conversations');
+    liveComms.conversations = Array.isArray(rows) ? rows : [];
+    liveComms.loaded = true;
+    if(liveComms.conversations.length){
+      const wanted = state.commsOpenId && liveComms.conversations.find(c=>c.id===state.commsOpenId);
+      await openLiveConversation((wanted || liveComms.conversations[0]).id, false);
+    }
+  }catch(e){
+    liveComms.error = e.message || 'Unable to load Communications.';
+    liveComms.loaded = true;
+  }finally{
+    liveComms.loading = false;
+  }
+  render();
+}
+
+async function openLiveConversation(id, rerender=true){
+  try{
+    const data = await commsRequest(`/api/conversations/${encodeURIComponent(id)}`);
+    liveComms.open = data.conversation;
+    liveComms.openMessages = data.messages || [];
+    state.commsOpenId = id;
+    await commsRequest(`/api/conversations/${encodeURIComponent(id)}`, {method:'PATCH', body:JSON.stringify({unread_for_admin:false})});
+    const row = liveComms.conversations.find(c=>c.id===id);
+    if(row) row.unread_for_admin = false;
+  }catch(e){
+    liveComms.error = e.message || 'Unable to open conversation.';
+  }
+  if(rerender) render();
+}
+
+function renderCommsLogin(){
   return `
     <div class="topline"><div><h1>Communications</h1><div class="meta">Every student conversation, in one inbox</div></div></div>
+    <div class="comms-login">
+      <h2>Sign in to Messages</h2>
+      <p>This protects the BTM student conversations from public access. Your credentials stay on the server and the session uses an HttpOnly cookie.</p>
+      <div class="field"><label>Email</label><input id="comms-login-email" type="email" autocomplete="username" placeholder="you@btm.com"></div>
+      <div class="field"><label>Password</label><input id="comms-login-password" type="password" autocomplete="current-password" placeholder="Password"></div>
+      <button class="btn primary" id="comms-login-submit">Sign in</button>
+      <div id="comms-login-error" style="margin-top:10px;color:var(--red);font-size:12px;"></div>
+    </div>`;
+}
 
+function renderCommunications(){
+  if(!liveComms.loaded){
+    setTimeout(loadLiveCommunications, 0);
+    return `<div class="topline"><div><h1>Communications</h1><div class="meta">Every student conversation, in one inbox</div></div></div><div class="comms-loading">Connecting to the BTM messaging backend…</div>`;
+  }
+  if(!liveComms.authenticated) return renderCommsLogin();
+  if(liveComms.error && !liveComms.open){
+    return `<div class="topline"><div><h1>Communications</h1><div class="meta">Every student conversation, in one inbox</div></div></div><div class="comms-error"><b>Communications backend unavailable.</b><br>${esc(liveComms.error)}<br><br>Check the Vercel environment variables and Supabase setup, then refresh.</div>`;
+  }
+
+  const list = liveComms.conversations.slice().sort((a,b)=>commsSortWeight(a)-commsSortWeight(b));
+  const open = liveComms.open;
+  return `
+    <div class="topline"><div><h1>Communications</h1><div class="meta">Every student conversation, in one inbox</div></div><div><span class="badge green">Backend connected</span></div></div>
     <div class="conn-banner">
-      <span class="conn-dot"></span>
-      <div class="conn-text"><b>Connected to:</b> Shopify Inbox, embedded in the BTM student portal theme. This mirrors student messages so Christine can see and reply from here instead of logging into each Shopify chat session — no more managing chats on one app and leads on another.<br><span style="color:var(--text-faint)">Known issue from Bree/Donamae's Sept 3 call: the send button in the embedded chat widget wasn't firing — flagged for Donamae to fix in the theme. Replies sent from here won't reach the student until that's resolved and the live API sync is turned on.</span></div>
+      <span class="conn-dot" style="background:var(--green);box-shadow:0 0 0 3px var(--green-dim);"></span>
+      <div class="conn-text"><b>BTM Messaging Backend</b> · ${esc(liveComms.email)}<br><span style="color:var(--text-faint)">Messages in this inbox are stored in the BTM communications database. Shopify Inbox is not being used as the backend.</span></div>
+      <button class="btn small" id="comms-logout">Log out</button>
     </div>
-
     <div class="comms-layout">
       <div class="comms-list">
         ${list.map(c=>`
-          <div class="comms-row ${c.id===openId?'active':''}" data-commsopen="${c.id}">
-            <div class="init-avatar">${initials(c.name)}</div>
+          <div class="comms-row ${c.id===state.commsOpenId?'active':''}" data-commsopen="${esc(c.id)}">
+            <div class="init-avatar">${esc(initials(c.customer_name || 'BTM'))}</div>
             <div class="cr-body">
-              <div class="cr-name">${c.name.split(' (')[0]} ${c.comms.status==='unread'?'<span class="unread-dot"></span>':''}</div>
-              <div class="cr-preview">${c.comms.thread.length ? (c.comms.lastFrom==='team'?'You: ':'') + c.comms.thread[c.comms.thread.length-1].text : 'No messages yet'}</div>
+              <div class="cr-name">${esc(c.customer_name || 'BTM Student')} ${c.unread_for_admin?'<span class="unread-dot"></span>':''}</div>
+              <div class="cr-preview">${esc(c.last_message ? (c.last_message.sender_type==='admin'?'You: ':'') + c.last_message.body : 'No messages yet')}</div>
             </div>
-            <div class="cr-time">${c.comms.lastAt||''}</div>
-          </div>
-        `).join('') || `<div class="empty-state">No conversations yet.</div>`}
+            <div class="cr-time">${formatCommsTime(c.updated_at)}</div>
+          </div>`).join('') || `<div class="empty-state">No conversations yet.</div>`}
       </div>
-
       <div class="comms-thread">
         ${open ? `
           <div class="comms-thread-head">
-            <div>
-              <div class="th-name">${open.name.split(' (')[0]}</div>
-              <div class="th-sub">${open.business} · assigned to ${findTeam(open.assigned).name} · <span class="badge ${open.comms.status==='answered'?'green':open.comms.status==='none'?'neutral':'red'}">${open.comms.status==='none'?'No activity':open.comms.status}</span></div>
-            </div>
-            <button class="btn small" data-nav="students" data-id="${open.id}">Open profile</button>
+            <div><div class="th-name">${esc(open.customer_name)}</div><div class="th-sub">${esc(open.customer_email || 'No email')} · <span class="badge ${open.status==='closed'?'neutral':open.status==='pending'?'amber':'green'}">${esc(open.status)}</span></div></div>
           </div>
           <div class="comms-msgs">
-            ${open.comms.thread.length ? open.comms.thread.map(m=>`
-              <div>
-                <div class="msg-bubble ${m.from}">${m.text}</div>
-                <div class="msg-time">${m.time}</div>
-              </div>`).join('') : `<div class="empty-state">No messages in this thread yet.</div>`}
+            ${liveComms.openMessages.length ? liveComms.openMessages.map(m=>`
+              <div class="msg-bubble ${m.sender_type==='admin'?'team':'student'}"><div>${esc(m.body)}</div><div class="msg-time">${esc(m.sender_name)} · ${formatCommsTime(m.created_at)}</div></div>
+            `).join('') : `<div class="empty-state">No messages yet.</div>`}
           </div>
           <div class="comms-reply">
-            <input type="text" placeholder="Reply to ${open.name.split(' (')[0]}…" id="comms-reply-input"/>
+            <input type="text" placeholder="Reply to ${esc(open.customer_name)}…" id="comms-reply-input" autocomplete="off" />
             <button class="btn primary small" id="comms-reply-send">Send</button>
           </div>
         ` : `<div class="empty-state">Select a conversation.</div>`}
       </div>
-    </div>
-  `;
+    </div>`;
 }
 
 // ---------- TASKS ----------
@@ -1427,29 +1518,54 @@ function bindEvents(){
     node.addEventListener('click', ()=>{ state.retentionTab = node.getAttribute('data-retentiontab'); render(); });
   });
   document.querySelectorAll('[data-commsopen]').forEach(node=>{
-    node.addEventListener('click', ()=>{
+    node.addEventListener('click', async ()=>{
       const id = node.getAttribute('data-commsopen');
-      state.commsOpenId = id;
-      const c = findCustomer(id);
-      if(c.comms.status==='unread') c.comms.status='unanswered';
-      render();
+      await openLiveConversation(id);
     });
   });
+  const commsLogin = document.getElementById('comms-login-submit');
+  if(commsLogin){
+    commsLogin.addEventListener('click', async ()=>{
+      const email = document.getElementById('comms-login-email').value.trim();
+      const password = document.getElementById('comms-login-password').value;
+      const error = document.getElementById('comms-login-error');
+      commsLogin.disabled = true;
+      try{
+        await commsRequest('/api/auth/login', {method:'POST', body:JSON.stringify({email,password})});
+        liveComms = {...liveComms, authenticated:true, loaded:false, loading:false, error:null};
+        render();
+      }catch(e){ error.textContent = e.message || 'Sign-in failed.'; }
+      finally{ commsLogin.disabled = false; }
+    });
+  }
+  const commsLogout = document.getElementById('comms-logout');
+  if(commsLogout){
+    commsLogout.addEventListener('click', async ()=>{
+      await commsRequest('/api/auth/logout', {method:'POST'});
+      liveComms = {loaded:true,loading:false,authenticated:false,email:null,error:null,conversations:[],open:null,openMessages:[]};
+      render();
+    });
+  }
   const commsSend = document.getElementById('comms-reply-send');
   if(commsSend){
-    commsSend.addEventListener('click', ()=>{
+    commsSend.addEventListener('click', async ()=>{
       const input = document.getElementById('comms-reply-input');
-      const c = findCustomer(state.commsOpenId);
-      if(input.value.trim() && c){
-        c.comms.thread.push({ from:'team', text: input.value.trim(), time:'Just now' });
-        c.comms.status = 'answered';
-        c.comms.lastFrom = 'team';
-        c.comms.lastAt = 'Just now';
-        logActivity(`Replied to ${c.name.split(' (')[0]} in Communications`);
+      const text = input?.value.trim();
+      const id = state.commsOpenId;
+      if(!text || !id) return;
+      commsSend.disabled = true;
+      commsSend.textContent = 'Sending…';
+      try{
+        const msg = await commsRequest(`/api/conversations/${encodeURIComponent(id)}/messages`, {method:'POST', body:JSON.stringify({body:text, sender_name:'Christine (You)'})});
+        liveComms.openMessages.push(msg);
+        const row = liveComms.conversations.find(c=>c.id===id);
+        if(row){ row.updated_at = msg.created_at; row.unread_for_admin=false; row.last_message={sender_type:'admin',body:text}; }
+        input.value='';
         render();
-        toast('Saved here — won\u2019t reach the student until Shopify Inbox is connected and the send bug is fixed.');
-      }
+      }catch(e){ toast(e.message || 'Message failed to send.'); commsSend.disabled=false; commsSend.textContent='Send'; }
     });
+    const input = document.getElementById('comms-reply-input');
+    if(input) input.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); commsSend.click(); } });
   }
   const search = document.getElementById('student-search');
   if(search){
