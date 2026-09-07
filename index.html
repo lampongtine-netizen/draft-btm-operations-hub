@@ -1298,14 +1298,14 @@ async function loadLiveCommunications(){
     liveComms.email = me.email || null;
     if(!liveComms.authenticated){
       liveComms.loaded = true;
-      return;
-    }
-    const rows = await commsRequest('/api/conversations');
-    liveComms.conversations = Array.isArray(rows) ? rows : [];
-    liveComms.loaded = true;
-    if(liveComms.conversations.length){
-      const wanted = state.commsOpenId && liveComms.conversations.find(c=>c.id===state.commsOpenId);
-      await openLiveConversation((wanted || liveComms.conversations[0]).id, false);
+    } else {
+      const rows = await commsRequest('/api/conversations');
+      liveComms.conversations = Array.isArray(rows) ? rows : [];
+      liveComms.loaded = true;
+      if(liveComms.conversations.length){
+        const wanted = state.commsOpenId && liveComms.conversations.find(c=>c.id===state.commsOpenId);
+        await openLiveConversation((wanted || liveComms.conversations[0]).id, false);
+      }
     }
   }catch(e){
     liveComms.error = e.message || 'Unable to load Communications.';
