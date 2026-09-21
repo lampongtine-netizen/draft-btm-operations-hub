@@ -54,3 +54,17 @@ for(const [name,action] of [
     assert.deepEqual(res.body,{error:'Integration authentication required'});
   });
 }
+
+test('Signed payment sync reaches payload validation without writing data',async()=>{
+  process.env.MAKE_WEBHOOK_SECRET='test-webhook-secret';
+  const handler=require('../api/integrations');const res=response();
+  await handler({method:'POST',headers:{authorization:'Bearer test-webhook-secret'},query:{action:'payment'},body:{}},res);
+  assert.equal(res.statusCode,400);
+  assert.deepEqual(res.body,{error:'eventId required'});
+});
+
+test('Shopify product and tag mappings select the correct access program',()=>{
+  const {accessFrom}=require('../api/integrations/_lib');
+  assert.deepEqual(accessFrom({tags:['Scale Society']}),{program:'Scale Society',level:'Level 2',educator:false});
+  assert.deepEqual(accessFrom({productTitle:'Educator Pathway'}),{program:'Educator Pathway',level:'Educator Pathway',educator:true});
+});
