@@ -4,7 +4,7 @@
   "version": "1.1.0-recovery",
   "scripts": {
     "test": "node --test test/*.test.js",
-    "check": "node --check operational.js && node --check api/_lib/common.js && node --check api/shopify/customers.js && node --check api/shopify/proxy.js"
+    "check": "node --check operational.js && node --check api/_lib/common.js && node --check api/admin/conversations.js && node --check api/admin/mark-read.js && node --check api/admin/reply.js && node --check api/shopify/customers.js && node --check api/shopify/proxy.js"
   },
   "engines": { "node": ">=20" }
 }

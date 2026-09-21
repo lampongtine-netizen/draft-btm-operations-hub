@@ -27,3 +27,17 @@ test('Shopify app proxy rejects unsigned requests before data access',async()=>{
   assert.equal(res.statusCode,401);
   assert.deepEqual(res.body,{error:'Invalid Shopify proxy signature'});
 });
+
+for(const [name,path,method] of [
+  ['conversation list','../api/admin/conversations','GET'],
+  ['conversation read update','../api/admin/mark-read','POST'],
+  ['staff reply','../api/admin/reply','POST']
+]){
+  test(`Admin ${name} rejects unauthenticated requests`,async()=>{
+    const handler=require(path);
+    const res=response();
+    await handler({method,headers:{},body:{}},res);
+    assert.equal(res.statusCode,401);
+    assert.deepEqual(res.body,{error:'Staff authentication required'});
+  });
+}
