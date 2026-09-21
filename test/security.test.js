@@ -1,0 +1,29 @@
+const test=require('node:test');
+const assert=require('node:assert/strict');
+
+function response(){
+  return {
+    statusCode:200,
+    body:null,
+    headers:{},
+    status(code){this.statusCode=code;return this},
+    json(body){this.body=body;return this},
+    setHeader(name,value){this.headers[name]=value}
+  };
+}
+
+test('Shopify customer PII endpoint rejects unauthenticated requests',async()=>{
+  const handler=require('../api/shopify/customers');
+  const res=response();
+  await handler({method:'GET',headers:{}},res);
+  assert.equal(res.statusCode,401);
+  assert.deepEqual(res.body,{error:'Staff authentication required'});
+});
+
+test('Shopify app proxy rejects unsigned requests before data access',async()=>{
+  const handler=require('../api/shopify/proxy');
+  const res=response();
+  await handler({method:'GET',headers:{},query:{}},res);
+  assert.equal(res.statusCode,401);
+  assert.deepEqual(res.body,{error:'Invalid Shopify proxy signature'});
+});

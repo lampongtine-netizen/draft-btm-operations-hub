@@ -1,87 +1,80 @@
-const crypto = require('crypto');
-const { supabase, readBody } = require('../_lib');
+const crypto=require('crypto');
+const {SUPABASE_URL,sbHeaders,shopifyGraphQL}=require('../_lib/common');
 
-function html(res, status, body) {
-  res.statusCode = status;
-  res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.end(body);
-}
-
-function verifyProxy(req) {
-  const secret = process.env.SHOPIFY_API_SECRET;
-  if (!secret) throw new Error('SHOPIFY_API_SECRET is not configured.');
-  const url = new URL(req.url, `https://${req.headers.host || 'localhost'}`);
-  const signature = url.searchParams.get('signature');
-  const timestamp = Number(url.searchParams.get('timestamp') || 0);
-  if (!signature || !timestamp) return { ok: false, status: 401, message: 'Invalid Shopify proxy request.' };
-  if (Math.abs(Date.now() / 1000 - timestamp) > 300) return { ok: false, status: 401, message: 'Expired Shopify proxy request.' };
-  const pairs = [];
-  for (const [key, value] of url.searchParams.entries()) {
-    if (key === 'signature') continue;
-    pairs.push([key, value]);
+function proxySignatureValid(query){
+  const secret=process.env.SHOPIFY_CLIENT_SECRET;
+  const got=String(query.signature||'');
+  if(!secret||!/^[a-f0-9]{64}$/i.test(got))return false;
+  const params={};
+  for(const [k,v] of Object.entries(query||{})){
+    if(k==='signature')continue;
+    params[k]=Array.isArray(v)?v.map(String):[String(v??'')];
   }
-  const grouped = {};
-  for (const [key, value] of pairs) (grouped[key] ||= []).push(value);
-  const message = Object.keys(grouped).sort().map(k => `${k}=${grouped[k].join(',')}`).join('');
-  const expected = crypto.createHmac('sha256', secret).update(message).digest('hex');
-  const a = Buffer.from(signature, 'utf8');
-  const b = Buffer.from(expected, 'utf8');
-  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return { ok: false, status: 401, message: 'Invalid Shopify proxy signature.' };
-  return { ok: true, url };
+  const message=Object.keys(params).sort().map(k=>`${k}=${params[k].join(',')}`).join('');
+  const want=crypto.createHmac('sha256',secret).update(message).digest('hex');
+  try{return crypto.timingSafeEqual(Buffer.from(got,'hex'),Buffer.from(want,'hex'));}catch{return false;}
 }
 
-async function getConversation(customerId) {
-  const rows = await supabase(`conversations?shopify_customer_id=eq.${encodeURIComponent(customerId)}&select=*&limit=1`);
-  return rows[0] || null;
+async function member(customerId){
+  const id=String(customerId||'');
+  if(!/^\d+$/.test(id))return null;
+  const data=await shopifyGraphQL(`query($id:ID!){customer(id:$id){id email displayName tags}}`,{id:`gid://shopify/Customer/${id}`});
+  const c=data?.customer;
+  if(!c)return null;
+  const tags=(c.tags||[]).map(x=>String(x).toLowerCase());
+  if(!tags.includes('member')&&!tags.includes('btm graduate support'))return null;
+  return {id:String(c.id).replace(/^gid:\/\/shopify\/Customer\//,''),name:c.displayName||c.email||'Member',email:c.email||''};
 }
 
-async function ensureConversation(customerId) {
-  const existing = await getConversation(customerId);
-  if (existing) return existing;
-  const created = await supabase('conversations', {
-    method: 'POST',
-    headers: { Prefer: 'return=representation' },
-    body: JSON.stringify({
-      shopify_customer_id: customerId,
-      customer_name: 'BTM Student',
-      customer_email: null,
-      status: 'open',
-      unread_for_admin: false,
-      unread_for_student: false
-    })
-  });
-  return created[0];
+async function getConversation(c){
+  const h=sbHeaders(),cid=encodeURIComponent(c.id);
+  const r=await fetch(`${SUPABASE_URL}/rest/v1/conversations?shopify_customer_id=eq.${cid}&limit=1`,{headers:h});
+  const j=await r.json();
+  if(!r.ok)throw new Error('Failed to find conversation');
+  return Array.isArray(j)?j[0]:null;
 }
 
-async function getMessages(conversationId) {
-  return await supabase(`messages?conversation_id=eq.${encodeURIComponent(conversationId)}&select=id,sender_type,sender_name,body,created_at&order=created_at.asc`);
-}
+module.exports=async function handler(req,res){
+  try{
+    if(!proxySignatureValid(req.query||{}))return res.status(401).json({error:'Invalid Shopify proxy signature'});
+    const configured=(process.env.SHOPIFY_STORE_DOMAIN||'').replace(/^https?:\/\//,'').replace(/\/$/,'').toLowerCase();
+    const shop=String(req.query.shop||'').toLowerCase();
+    if(!configured||shop!==configured)return res.status(403).json({error:'Shop not allowed'});
+    const customerId=String(req.query.logged_in_customer_id||'');
+    if(!customerId)return res.status(401).json({error:'Please log in to your Shopify customer account'});
+    const c=await member(customerId);
+    if(!c)return res.status(403).json({error:'Member access required'});
+    const action=String(req.query.action||'messages');
 
-function page(conversation, messages, customerId) {
-  const safe = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const items = messages.map(m => `<div class="msg ${m.sender_type === 'admin' ? 'admin' : 'student'}"><div>${safe(m.body)}</div><small>${safe(m.sender_type === 'admin' ? 'BTM Team' : 'You')}</small></div>`).join('');
-  return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>BTM Messages</title><style>body{font-family:Georgia,serif;background:#f4eee3;margin:0;color:#27231e}.wrap{max-width:760px;margin:40px auto;padding:0 18px}.card{background:#fffdf8;border:1px solid #dfd4c2;border-radius:16px;padding:24px;box-shadow:0 10px 30px #0000000d}h1{margin:0 0 6px;font-size:30px}.sub{color:#8a7e6d;margin-bottom:22px}.thread{display:flex;flex-direction:column;gap:10px;min-height:220px}.msg{max-width:78%;padding:12px 14px;border-radius:14px;background:#f3ede3}.msg.student{align-self:flex-end;background:#f3ede3}.msg.admin{align-self:flex-start;background:#b89255;color:white}.msg small{display:block;margin-top:5px;opacity:.7;font-size:11px}.form{display:flex;gap:10px;margin-top:20px}.form textarea{flex:1;border:1px solid #d9cdbb;border-radius:12px;padding:12px;font:inherit;resize:vertical}.form button{border:0;border-radius:12px;background:#b89255;color:white;padding:0 20px;font-weight:bold}.notice{padding:12px;border-radius:10px;background:#f7e7c9;margin-bottom:16px}</style></head><body><main class="wrap"><div class="card"><h1>BTM Messages</h1><div class="sub">Beauty Training Mastery support</div><div id="notice" class="notice" style="display:none"></div><div class="thread" id="thread">${items || '<div class="sub">No messages yet. Send your first message below.</div>'}</div><form class="form" id="form"><textarea id="body" rows="2" placeholder="Type your message..."></textarea><button>Send</button></form></div></main><script>const form=document.getElementById('form'),body=document.getElementById('body'),notice=document.getElementById('notice');form.addEventListener('submit',async e=>{e.preventDefault();const text=body.value.trim();if(!text)return;const r=await fetch(location.href,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({body:text})});const d=await r.json();if(!r.ok){notice.textContent=d.error||'Could not send message';notice.style.display='block';return}location.reload()});</script></body></html>`;
-}
-
-module.exports = async (req, res) => {
-  try {
-    const auth = verifyProxy(req);
-    if (!auth.ok) return html(res, auth.status, `<p>${auth.message}</p>`);
-    const customerId = auth.url.searchParams.get('logged_in_customer_id');
-    if (!customerId) return html(res, 401, '<p>Please log in to your BTM/Shopify account to use Messages.</p>');
-    const conversation = await ensureConversation(customerId);
-    if (req.method === 'POST') {
-      const body = await readBody(req);
-      const text = String(body.body || '').trim();
-      if (!text) return require('../_lib').json(res, 400, { error: 'Message cannot be empty.' });
-      await supabase('messages', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ conversation_id: conversation.id, sender_type: 'student', sender_name: 'Student', body: text }) });
-      await supabase(`conversations?id=eq.${encodeURIComponent(conversation.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ unread_for_admin: true, status: 'open' }) });
-      return require('../_lib').json(res, 200, { ok: true });
+    if(req.method==='GET'&&action==='messages'){
+      const convo=await getConversation(c);
+      if(!convo)return res.status(200).json({conversationId:null,messages:[]});
+      const mr=await fetch(`${SUPABASE_URL}/rest/v1/messages?conversation_id=eq.${encodeURIComponent(convo.id)}&order=created_at.asc`,{headers:sbHeaders()});
+      const messages=await mr.json();
+      if(!mr.ok)throw new Error('Failed to fetch messages');
+      if(convo.unread_for_student)await fetch(`${SUPABASE_URL}/rest/v1/conversations?id=eq.${encodeURIComponent(convo.id)}`,{method:'PATCH',headers:sbHeaders(),body:JSON.stringify({unread_for_student:false})});
+      return res.status(200).json({conversationId:convo.id,messages});
     }
-    const messages = await getMessages(conversation.id);
-    return html(res, 200, page(conversation, messages, customerId));
-  } catch (e) {
-    console.error(e);
-    return html(res, 500, `<p>BTM Messages error: ${String(e.message || e)}</p>`);
-  }
+
+    if(req.method==='POST'&&action==='send'){
+      let body=req.body;
+      if(typeof body==='string'){try{body=JSON.parse(body)}catch{body={message:body}}}
+      const text=String(body?.message||'').trim();
+      if(!text||text.length>2000)return res.status(400).json({error:'Message must be 1–2000 characters'});
+      let convo=await getConversation(c);
+      const h=sbHeaders('return=representation');
+      if(!convo){
+        const cr=await fetch(`${SUPABASE_URL}/rest/v1/conversations`,{method:'POST',headers:h,body:JSON.stringify({shopify_customer_id:c.id,customer_name:c.name,customer_email:c.email,status:'open',unread_for_admin:true,unread_for_student:false})});
+        const created=await cr.json();
+        if(!cr.ok)throw new Error(created?.message||'Failed to create conversation');
+        convo=created[0];
+      }
+      const mr=await fetch(`${SUPABASE_URL}/rest/v1/messages`,{method:'POST',headers:h,body:JSON.stringify({conversation_id:convo.id,sender_type:'student',sender_name:c.name,body:text})});
+      const md=await mr.json();
+      if(!mr.ok)throw new Error('Failed to send message');
+      await fetch(`${SUPABASE_URL}/rest/v1/conversations?id=eq.${encodeURIComponent(convo.id)}`,{method:'PATCH',headers:sbHeaders(),body:JSON.stringify({customer_name:c.name,customer_email:c.email,status:'open',unread_for_admin:true,updated_at:new Date().toISOString()})});
+      return res.status(200).json({conversationId:convo.id,message:md[0]});
+    }
+    return res.status(405).json({error:'Unsupported proxy request'});
+  }catch(e){console.error('shopify proxy:',e);return res.status(500).json({error:'Unable to process member message'});}
 };

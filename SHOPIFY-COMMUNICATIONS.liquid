@@ -1,0 +1,38 @@
+{% if customer and customer.tags contains 'member' %}
+<div id="btm-member-comms" style="max-width:760px;margin:0 auto;font-family:inherit">
+  <div id="btm-thread" style="min-height:220px;border:1px solid #e5dfd4;border-radius:14px;padding:18px;margin-bottom:14px">Loading messages…</div>
+  <form id="btm-message-form" style="display:flex;gap:10px">
+    <textarea id="btm-message" maxlength="2000" required placeholder="Write your message…" style="flex:1;min-height:80px;padding:12px;border:1px solid #d8d0c2;border-radius:12px"></textarea>
+    <button type="submit" style="align-self:flex-end;padding:12px 18px;border:0;border-radius:10px;background:#111;color:#fff">Send</button>
+  </form>
+  <div id="btm-status" style="margin-top:8px;font-size:13px"></div>
+</div>
+<script>
+(()=>{
+  const thread=document.getElementById('btm-thread'), form=document.getElementById('btm-message-form'), input=document.getElementById('btm-message'), status=document.getElementById('btm-status');
+  const endpoint='/apps/btm-messages';
+  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  async function load(){
+    try{
+      const r=await fetch(endpoint+'?action=messages',{credentials:'same-origin'}), j=await r.json();
+      if(!r.ok)throw new Error(j.error||'Unable to load messages');
+      const m=j.messages||[];
+      thread.innerHTML=m.length?m.map(x=>`<div style="margin:0 0 14px"><strong>${esc(x.sender_name||x.sender_type)}</strong><div style="margin-top:4px">${esc(x.body)}</div></div>`).join(''):'<div style="opacity:.7">No messages yet. Send a message to start your conversation.</div>';
+      status.textContent='';
+    }catch(e){status.textContent=e.message;}
+  }
+  form.addEventListener('submit',async e=>{
+    e.preventDefault(); const message=input.value.trim(); if(!message)return;
+    status.textContent='Sending…';
+    try{
+      const r=await fetch(endpoint+'?action=send',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({message})}),j=await r.json();
+      if(!r.ok)throw new Error(j.error||'Unable to send message');
+      input.value=''; await load();
+    }catch(err){status.textContent=err.message;}
+  });
+  load(); setInterval(load,5000);
+})();
+</script>
+{% else %}
+<p>Please log in with an active member account to access Communications.</p>
+{% endif %}
