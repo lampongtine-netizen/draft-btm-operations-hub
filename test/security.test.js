@@ -42,14 +42,14 @@ for(const [name,path,method] of [
   });
 }
 
-for(const [name,path] of [
-  ['Make payment sync','../api/integrations/make-payment'],
-  ['Shopify student sync','../api/integrations/shopify-student'],
-  ['Make check-in sync','../api/integrations/make-checkin']
+for(const [name,action] of [
+  ['Make payment sync','payment'],
+  ['Shopify student sync','shopify-student'],
+  ['Make check-in sync','checkin']
 ]){
   test(`${name} rejects unsigned requests`,async()=>{
-    const handler=require(path);const res=response();
-    await handler({method:'POST',headers:{},body:{}},res);
+    const handler=require('../api/integrations');const res=response();
+    await handler({method:'POST',headers:{},query:{action},body:{}},res);
     assert.equal(res.statusCode,401);
     assert.deepEqual(res.body,{error:'Integration authentication required'});
   });
