@@ -1,82 +1,101 @@
-# BTM Operations HQ V2 — Donna Mae handover
+# BTM Operations HQ — Donna Mae handover
 
-## Current status
+## Release status — 21 September 2026
 
-The authoritative Vercel production artifact has been recovered into source control. The recovered application keeps the existing BTM Operations HQ interface and Shopify member communications workflow, and adds Supabase-backed Check-ins and Approval Tracking.
+- Authoritative source: Vercel deployment `dpl_3q3ZXaUdKu91giZMi7W999u2D7qS`.
+- Recovery branch: `recovery/btm-trial-v2-20260921`.
+- Tested preview: `https://btm-operations-hq-empty-trial-v2-5z42rn8ed.vercel.app`.
+- Production is unchanged. Do not promote or replace production without Christine's explicit approval.
+- Production data was preserved: 3 conversations and 7 messages remain in Supabase.
+- There are no example students, payments, entitlements, or uploaded documents in production.
 
-Production has not been replaced. No production data has been edited or migrated.
+## What is complete
 
-## What Donna Mae will manage
+### Communications
 
-### Staff access
+- Existing conversations display again in Operations HQ.
+- Dashboard and navigation counters show total messages, not only unread conversations.
+- The final preview displays 7 messages across 3 conversations with no sync error.
+- Supabase Realtime listens for conversation and message changes; a 3-second authenticated refresh is the fallback.
+- Student messages enter through the signed Shopify app proxy. Staff replies use the same Supabase thread.
 
-1. Staff enter their approved BTM email on the Operations HQ sign-in page.
-2. Supabase sends a magic sign-in link.
-3. Only emails listed in the Supabase `admins` table receive operational data access through RLS.
-4. If a staff member can sign in but sees a permissions message, confirm their exact email is present in `admins` before changing any policy.
+### Staff authentication
 
-### Shopify customer connection
+- Staff use passwordless Supabase magic links and staff-only RLS.
+- A preview sign-in email was successfully requested for `csclampong@gmail.com`.
+- If a staff member cannot load data, check their exact email in `public.admins` before changing RLS.
 
-- The Shopify Admin API connection is read-only and requires the `read_customers` scope.
-- The Vercel server exchanges the Shopify Client ID and Client Secret for a short-lived access token.
-- Customer data is now restricted to authenticated BTM staff or Bree's private review session.
-- Do not paste the Shopify Client Secret or Supabase service-role key into Shopify Liquid or browser code.
+### Student, payment and check-in intake
 
-### Shopify member communications
+One authenticated endpoint handles automation traffic:
 
-1. Keep the app proxy path as `/apps/btm-messages`.
-2. Use `SHOPIFY-COMMUNICATIONS.liquid` in the logged-in member communications section.
-3. The proxy validates Shopify's signed request and the logged-in customer ID.
-4. The customer must have either the `member` or `btm graduate support` tag.
-5. Messages appear in Operations HQ > Communications. Staff can reply as Bree Wilkinson or BTM Support Team.
+`POST /api/integrations?action=<action>`
 
-### Check-ins and approvals
+Send `Authorization: Bearer <MAKE_WEBHOOK_SECRET>` and JSON.
 
-- Check-ins can be created for a student and marked Submitted, Reviewed, or Overdue.
-- Approvals can be assigned to a student and staff owner, given a due date, and marked Pending, Approved, or Changes Requested.
-- These records are stored in Supabase and protected by staff-only RLS.
+| Action | Purpose | Required identity |
+|---|---|---|
+| `payment` | Record a Stripe event and activate/update access | `eventId` plus `email` or `shopifyCustomerId` |
+| `shopify-student` | Create/update a student and map access | `email` or `shopifyCustomerId` |
+| `checkin` | Store a submitted check-in | Existing student's `email` or `shopifyCustomerId` |
 
-## Preview acceptance test
+Payment events are idempotent by `eventId`. Paid, succeeded, current, active and trialing states activate access.
 
-Run this on the preview URL only:
+| Shopify product or tag | Portal program | Level |
+|---|---|---|
+| Scale Society or Level 2 | Scale Society | Level 2 |
+| Educator | Educators Pathway | Educators Pathway |
+| Advisory, Business Support or Level 1 | Business Advisory & Support | Level 1 |
+| Anything else | BTM Membership | Member |
 
-1. Open the preview and confirm the BTM Operations HQ sign-in page loads.
-2. Sign in using an email already listed in `admins`.
-3. Confirm Dashboard, Students, Staff Tasks, Communications, Check-ins, Approvals, Reporting, and Team Profiles open without a Supabase error.
-4. Add a test check-in, change it to Reviewed, refresh, and confirm it persists.
-5. Add a test approval, change it to Approved, refresh, and confirm it persists.
-6. Open Shopify Customers and confirm it loads only after staff sign-in.
-7. In a Shopify test customer tagged `member`, send a test message through `/apps/btm-messages`.
-8. Confirm the conversation appears in Operations HQ, reply as BTM Support Team, and confirm the reply appears in Shopify.
-9. Repeat the reply as Bree Wilkinson.
-10. Confirm an unsigned direct request to the Shopify proxy is rejected.
+### Storage
 
-## Migration and release order
+- Supabase contains `payment_events`, `access_entitlements` and `submission_documents`.
+- The `student-submissions` bucket is private, limited to 10 MB, and accepts PDF, JPG, PNG and DOCX.
+- Google Drive is not connected. Supabase Storage is the selected secure document store.
 
-1. Run `supabase-operational-migration.sql` in a Supabase branch or disposable clone.
-2. Complete the preview acceptance test.
-3. Review Supabase security and performance advisors.
-4. Back up the production database.
-5. Obtain Christine's approval.
-6. Apply the reviewed migration to production.
-7. Promote the tested preview artifact or deploy the approved commit to production.
-8. Re-run the acceptance test and check runtime errors.
+## Make.com setup
 
-## Environment variables
+The Vercel receiver is ready, but the Make scenario still needs an authenticated Make user.
 
-The preview needs these Vercel variables:
+1. Add an HTTP `Make a request` module after the Stripe/Shopify success step.
+2. URL: `https://<approved-domain>/api/integrations?action=payment`.
+3. Method: `POST`; body type: JSON.
+4. Header: `Authorization: Bearer <the Vercel MAKE_WEBHOOK_SECRET>`.
+5. Map `eventId`, `email` or `shopifyCustomerId`, payment/subscription status, product title, tags, Stripe IDs, amount and currency.
+6. Treat HTTP 200 with `duplicate: true` as success. Retry 5xx responses; fix 400/401 responses before retrying.
+7. Use `action=shopify-student` for enrolment and `action=checkin` for check-ins.
 
-- `BTM_DEMO_ACCESS_CODE`
-- `BTM_DEMO_SESSION_SECRET`
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `SHOPIFY_STORE_DOMAIN`
-- `SHOPIFY_CLIENT_ID`
-- `SHOPIFY_CLIENT_SECRET`
-- `BTM_SHOPIFY_ORIGINS`
+Keep the Make secret only in Make's secured connection/variable and Vercel environment settings.
 
-Keep all values in Vercel environment settings. Do not commit real values.
+## Verification completed
 
-## Rollback
+- 10 automated authentication, validation and access-mapping tests pass.
+- Syntax and repository whitespace checks pass.
+- Vercel preview build is Ready.
+- Communications shows 7 messages across 3 conversations and the correct counter.
+- Realtime includes `conversations` and `messages`.
+- The private document bucket and commerce tables exist.
+- Staff magic-link delivery was accepted by Supabase.
+- Unsigned admin, Shopify proxy and integration requests are rejected.
 
-If preview testing fails, do not promote it. The existing deployment remains unchanged. If a production release is later approved and fails, restore the previous Vercel deployment alias first, then investigate without deleting Supabase data.
+## Remaining acceptance tests before go-live
+
+1. Copy the existing Shopify production variables to the recovery preview: `SHOPIFY_STORE_DOMAIN`, `SHOPIFY_CLIENT_ID`, `SHOPIFY_CLIENT_SECRET`, `BTM_SHOPIFY_ORIGINS`.
+2. In Make.com, add the HTTP module using the preview URL and its secret.
+3. Use the agreed real test customer/order to verify Stripe → Make → Vercel → Supabase → Shopify tags.
+4. Confirm the resulting student and entitlement in Operations HQ.
+5. Send a portal message, verify it reaches HQ within 3 seconds, reply as Support and Bree, and verify both replies in the portal.
+6. Submit one check-in and one permitted document; confirm the admin record and private storage metadata.
+7. Review test records with Christine before retaining or removing them.
+
+Shopify's connection-verification page blocked the remote test browser, and Make.com access was not granted during recovery. Those account-level checks remain release blockers.
+
+## Go-live and rollback
+
+1. Finish every remaining test on the recovery preview.
+2. Back up Supabase.
+3. Obtain Christine's explicit approval to replace the live deployment.
+4. Promote the exact tested commit/deployment.
+5. Repeat authentication, messaging, registration, payment, check-in and storage smoke tests.
+6. If a critical check fails, restore the previous Vercel production deployment alias. Do not delete Supabase data during rollback.
