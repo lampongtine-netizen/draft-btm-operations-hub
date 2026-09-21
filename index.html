@@ -134,7 +134,7 @@ const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 let state={route:{view:'dashboard',id:null},studentFilter:'all',studentSearch:'',renewalFilter:'all',commsOpenId:null,replyAs:'support',profileTab:'overview',collapsed:{checkins:false,needsaction:false,newstudents:false,board:false,team:false},loading:true,loadError:null,commsError:null};
 let team=[]; let customers=[]; let tasks=[]; let activityLog=[]; let conversations=[]; let session=null; let authError=null;
-let shopifyCustomers=null; let shopifyLoading=false; let shopifyLoadError=null; let shopifyFetchedAt=null; let demoMode=false; let approvals=[]; let checkins=[]; let commsChannel=null; let commsRefreshing=false;
+let shopifyCustomers=null; let shopifyLoading=false; let shopifyLoadError=null; let shopifyFetchedAt=null; let shopifySyncedThisSession=false; let demoMode=false; let approvals=[]; let checkins=[]; let commsChannel=null; let commsRefreshing=false;
 
 function escapeHtml(value){return String(value==null?'':value).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function currentActor(){if(demoMode)return 'Bree Wilkinson';const email=session&&session.user&&session.user.email||'';const a=team.find(x=>x.email===email);return a?a.name:(email||'BTM Operations');}
@@ -195,8 +195,30 @@ async function loadShopifyCustomers(){
   }catch(e){ shopifyLoadError = e.message || String(e); }
   shopifyLoading=false; render();
 }
+async function syncShopifyStudents(silent=false){
+  if(demoMode||!session?.access_token)return false;
+  try{
+    const res=await fetch('/api/shopify/customers',{method:'POST',headers:{Authorization:`Bearer ${session.access_token}`},credentials:'include'});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok)throw new Error(data.error||'Shopify student sync failed');
+    shopifySyncedThisSession=true;
+    if(!silent)toast(`Shopify sync complete — ${data.portalStudents} students, ${data.created} added, ${data.updated} updated`);
+    return true;
+  }catch(e){if(!silent)toast('Shopify sync failed — '+(e.message||e));return false;}
+}
 function renderShopifyCustomers(){
   if(shopifyCustomers===null && !shopifyLoading && !shopifyLoadError){ loadShopifyCustomers(); }
+  setTimeout(()=>{
+    const top=document.querySelector('#main .topline');
+    if(top&&!document.getElementById('shopify-sync-students')){
+      const button=document.createElement('button');button.className='btn primary';button.id='shopify-sync-students';button.textContent='Sync Students Now';
+      button.addEventListener('click',async()=>{button.disabled=true;button.textContent='Syncing…';if(await syncShopifyStudents(false))await loadAll();});
+      top.appendChild(button);
+    }
+    const title=document.querySelector('#main .placeholder-block .pt'),copy=document.querySelector('#main .placeholder-block .ps');
+    if(title)title.textContent='Student sync rules';
+    if(copy)copy.textContent='Tagged portal students are automatically displayed in Students / Members. Retail customers without a student or program tag are not imported.';
+  },0);
   return `<div class="topline"><div><h1>Shopify Customers</h1><div class="meta">Live from the Beauty Training Mastery Admin API — not demo data</div></div></div><div class="conn-banner"><span class="conn-dot" style="background:var(--green);box-shadow:0 0 0 3px var(--green-dim);"></span><div class="conn-text"><b>Connected to:</b> Shopify Admin API (client credentials grant, read-only). ${shopifyFetchedAt?`Last fetched ${relTime(shopifyFetchedAt)}.`:''} <span data-shopifyrefresh style="text-decoration:underline;cursor:pointer;color:var(--gold);">Refresh</span></div></div>${shopifyLoading?`<div class="empty-state">Loading real customers from Shopify…</div>`:''}${shopifyLoadError?`<div class="empty-state" style="border-color:var(--red);color:var(--red);">Couldn't load Shopify data.<br><span style="color:var(--text-faint);font-size:11px;">${escapeHtml(shopifyLoadError)}</span></div>`:''}${shopifyCustomers && shopifyCustomers.length?`<table><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Orders</th><th>Total Spent</th><th>Status</th><th>Customer since</th></tr></thead><tbody>${shopifyCustomers.map(c=>`<tr><td>${escapeHtml(c.name)}</td><td>${escapeHtml(c.email||'—')}</td><td>${escapeHtml(c.phone||'—')}</td><td>${escapeHtml(c.ordersCount)}</td><td>$${escapeHtml(c.totalSpent)}</td><td><span class="badge ${c.state==='enabled'?'green':'neutral'}">${escapeHtml(c.state)}</span></td><td>${new Date(c.createdAt).toLocaleDateString()}</td></tr>`).join('')}</tbody></table>`:''}${shopifyCustomers && shopifyCustomers.length===0?`<div class="empty-state">Connected successfully — Shopify returned zero customers for this store.</div>`:''}<div class="placeholder-block" style="margin-top:16px;"><div class="pt">Not yet linked to Students</div><div class="ps">This proves the live connection works. Matching these real Shopify customers to BTM Advisory/Scale Society students (who's Level 1 vs Level 2, who's an active student vs a wholesale buyer) is a business-logic decision — worth confirming with Bree before auto-populating the Students table from this.</div></div>`;
 }
 function relTime(iso){if(!iso)return'—';const d=new Date(iso);const diffMs=Date.now()-d.getTime();const mins=Math.round(diffMs/60000);if(mins<1)return'Just now';if(mins<60)return `${mins}m ago`;const hrs=Math.round(mins/60);if(hrs<24)return hrs===1?'1 hour ago':`${hrs} hours ago`;const days=Math.round(hrs/24);if(days===1)return'Yesterday';if(days<7)return `${days} days ago`;return d.toLocaleDateString();}
@@ -206,6 +228,7 @@ function hoursUntil(iso){if(!iso)return null;return Math.max(0,Math.round((new D
 async function loadAll(){
   state.loading=true; state.loadError=null; render();
   try{
+    if(!shopifySyncedThisSession)await syncShopifyStudents(true);
     const [adminsRes,studentsRes,tasksRes,activityRes,convosRes]=await Promise.all([
       sb.from('admins').select('*').order('created_at'),
       sb.from('students').select('*, notes(*), support_plan_goals(*), access_entitlements(*)').order('created_at'),

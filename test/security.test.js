@@ -68,3 +68,11 @@ test('Shopify product and tag mappings select the correct access program',()=>{
   assert.deepEqual(accessFrom({tags:['Scale Society']}),{program:'Scale Society',level:'Level 2',educator:false});
   assert.deepEqual(accessFrom({productTitle:'Educator Pathway'}),{program:'Educator Pathway',level:'Educator Pathway',educator:true});
 });
+
+test('Shopify portal student tags are included and retail customers are excluded',()=>{
+  const {isPortalStudent}=require('../api/shopify/customers')._test;
+  assert.equal(isPortalStudent({tags:['member']}),true);
+  assert.equal(isPortalStudent({tags:['Scale Society']}),true);
+  assert.equal(isPortalStudent({tags:['Educator Pathway']}),true);
+  assert.equal(isPortalStudent({tags:['wholesale','newsletter']}),false);
+});
