@@ -34,6 +34,15 @@ function demoActive(req){
   return who==='bree'&&Number(exp)>Date.now();
 }
 
+function integrationActive(req){
+  const expected=String(process.env.MAKE_WEBHOOK_SECRET||'');
+  if(!expected)return false;
+  const bearer=String(req.headers.authorization||'').match(/^Bearer\s+(.+)$/i)?.[1];
+  const supplied=String(bearer||req.headers['x-make-secret']||'');
+  const a=Buffer.from(supplied),b=Buffer.from(expected);
+  return a.length===b.length&&a.length>0&&crypto.timingSafeEqual(a,b);
+}
+
 async function staffActive(req){
   if(demoActive(req))return true;
   const header=String(req.headers.authorization||'');
@@ -100,6 +109,17 @@ async function shopifyGraphQL(query,variables={}){
   return j.data;
 }
 
+async function addShopifyCustomerTags(customerId,tags){
+  const numeric=String(customerId||'').replace(/^gid:\/\/shopify\/Customer\//,'');
+  if(!/^\d+$/.test(numeric))throw new Error('Invalid Shopify customer ID');
+  const clean=[...new Set((tags||[]).map(String).map(x=>x.trim()).filter(Boolean))];
+  if(!clean.length)return;
+  const mutation=`mutation($id:ID!,$tags:[String!]!){tagsAdd(id:$id,tags:$tags){userErrors{field message}}}`;
+  const data=await shopifyGraphQL(mutation,{id:`gid://shopify/Customer/${numeric}`,tags:clean});
+  const errors=data?.tagsAdd?.userErrors||[];
+  if(errors.length)throw new Error(errors[0].message||'Shopify tag update failed');
+}
+
 async function verifyShopifyMember(customerId,email){
   if(!customerId||!email)return {ok:false,error:'Missing customer identity'};
   const id=String(customerId).replace(/^gid:\/\/shopify\/Customer\//,'');
@@ -119,4 +139,4 @@ async function verifyShopifyMember(customerId,email){
   }
 }
 
-module.exports={SUPABASE_URL,sbHeaders,cors,demoActive,staffActive,verifyShopifyMember,getShopifyAccessToken,shopifyGraphQL};
+module.exports={SUPABASE_URL,sbHeaders,cors,demoActive,integrationActive,staffActive,verifyShopifyMember,getShopifyAccessToken,shopifyGraphQL,addShopifyCustomerTags};

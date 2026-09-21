@@ -41,3 +41,16 @@ for(const [name,path,method] of [
     assert.deepEqual(res.body,{error:'Staff authentication required'});
   });
 }
+
+for(const [name,path] of [
+  ['Make payment sync','../api/integrations/make-payment'],
+  ['Shopify student sync','../api/integrations/shopify-student'],
+  ['Make check-in sync','../api/integrations/make-checkin']
+]){
+  test(`${name} rejects unsigned requests`,async()=>{
+    const handler=require(path);const res=response();
+    await handler({method:'POST',headers:{},body:{}},res);
+    assert.equal(res.statusCode,401);
+    assert.deepEqual(res.body,{error:'Integration authentication required'});
+  });
+}
