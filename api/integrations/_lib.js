@@ -8,6 +8,18 @@ function jsonBody(req){
 function safeText(value,max=500){return String(value||'').trim().slice(0,max)}
 function emailFilter(email){return encodeURIComponent(String(email||'').trim().toLowerCase())}
 
+function paymentAmount(input){
+  if(input.amount!=null&&input.amount!==''){
+    const amount=Number(input.amount);
+    return Number.isFinite(amount)?amount:null;
+  }
+  if(input.amountCents!=null&&input.amountCents!==''){
+    const cents=Number(input.amountCents);
+    return Number.isFinite(cents)?cents/100:null;
+  }
+  return null;
+}
+
 async function findStudent({shopifyCustomerId,email}){
   const h=sbHeaders();
   if(shopifyCustomerId){
@@ -49,4 +61,4 @@ function accessFrom(input){
   return {program:'BTM Membership',level:'Member',educator:false};
 }
 
-module.exports={jsonBody,safeText,findStudent,saveStudent,saveEntitlement,accessFrom};
+module.exports={jsonBody,safeText,paymentAmount,findStudent,saveStudent,saveEntitlement,accessFrom};
