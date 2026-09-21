@@ -1,5 +1,5 @@
 const {SUPABASE_URL,sbHeaders,integrationActive,addShopifyCustomerTags}=require('./_lib/common');
-const {jsonBody,safeText,findStudent,saveStudent,saveEntitlement,accessFrom}=require('./integrations/_lib');
+const {jsonBody,safeText,paymentAmount,findStudent,saveStudent,saveEntitlement,accessFrom}=require('./integrations/_lib');
 
 async function syncPayment(b){
   const eventId=safeText(b.eventId||b.id,255),email=safeText(b.email||b.customerEmail,320).toLowerCase();
@@ -15,7 +15,7 @@ async function syncPayment(b){
   const access=accessFrom(b),existing=await findStudent({shopifyCustomerId,email});
   const student=await saveStudent(existing,{shopify_customer_id:shopifyCustomerId||existing?.shopify_customer_id||null,name:safeText(b.name||b.customerName,200)||existing?.name||email,email:email||existing?.email||null,program:access.program,level:access.level,educator_pathway:access.educator,status:active?'Active':'Payment Review',payment_status:active?'Current':(safeText(b.paymentStatus||b.status,80)||'Pending'),renewal_date:b.renewalDate||existing?.renewal_date||null,updated_at:new Date().toISOString()});
   await saveEntitlement({studentId:student.id,program:access.program,level:access.level,source:'stripe',sourceReference:safeText(b.stripeSubscriptionId||b.stripePaymentIntentId||eventId,255),status:active?'active':'pending',metadata:{eventType:b.eventType||b.type||null,renewalDate:b.renewalDate||null}});
-  const er=await fetch(`${SUPABASE_URL}/rest/v1/payment_events`,{method:'POST',headers:sbHeaders('return=representation'),body:JSON.stringify({external_event_id:eventId,event_type:safeText(b.eventType||b.type,120)||'payment.updated',student_id:student.id,shopify_customer_id:shopifyCustomerId||null,stripe_customer_id:safeText(b.stripeCustomerId,255)||null,stripe_subscription_id:safeText(b.stripeSubscriptionId,255)||null,payment_status:paymentStatus||null,subscription_status:subscriptionStatus||null,access_active:active,amount:b.amount==null?null:Number(b.amount),currency:safeText(b.currency,12).toUpperCase()||null,payload:b})});
+  const er=await fetch(`${SUPABASE_URL}/rest/v1/payment_events`,{method:'POST',headers:sbHeaders('return=representation'),body:JSON.stringify({external_event_id:eventId,event_type:safeText(b.eventType||b.type,120)||'payment.updated',student_id:student.id,shopify_customer_id:shopifyCustomerId||null,stripe_customer_id:safeText(b.stripeCustomerId,255)||null,stripe_subscription_id:safeText(b.stripeSubscriptionId,255)||null,payment_status:paymentStatus||null,subscription_status:subscriptionStatus||null,access_active:active,amount:paymentAmount(b),currency:safeText(b.currency,12).toUpperCase()||null,payload:b})});
   const events=await er.json();
   if(!er.ok)throw new Error(events?.message||'Unable to record payment event');
   if(active&&shopifyCustomerId)await addShopifyCustomerTags(shopifyCustomerId,['member',`btm-${access.level.toLowerCase().replace(/[^a-z0-9]+/g,'-')}`]);
