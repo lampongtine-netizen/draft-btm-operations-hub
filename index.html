@@ -7,1628 +7,214 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  :root{
-    /* warm ivory canvas, black sidebar, gold/tan labels, teal hairline — matched to BTM member portal */
-    --bg: #f1ece2;
-    --surface: #ffffff;
-    --surface-raised: #faf7ef;
-    --border: #e4ddcc;
-    --border-soft: #e9e2d2;
-    --text: #201e1a;
-    --text-dim: #6b6558;
-    --text-faint: #9b9483;
-
-    --sidebar-bg: #101010;
-    --sidebar-surface: #1a1a1a;
-    --sidebar-border: #2a2a28;
-    --sidebar-text: #f1ece2;
-    --sidebar-text-dim: #b5ad99;
-    --sidebar-text-faint: #7a7466;
-
-    --gold: #ad8a55;
-    --gold-soft: #cbb383;
-    --teal: #2f6e6b;
-
-    --rose: #ad8a55;         /* primary accent = gold, replacing prior rose */
-    --rose-dim: #cbb383;
-    --rose-ink: #1c1712;      /* text on gold buttons */
-
-    --green: #4c7d5e;
-    --green-dim: #e4ecdf;
-    --amber: #ad7f2c;
-    --amber-dim: #f3e8cf;
-    --red: #ac4c3c;
-    --red-dim: #f5e0da;
-
-    --radius-s: 6px;
-    --radius-m: 10px;
-    --radius-l: 16px;
-  }
-  *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
-  body{
-    background:var(--bg);
-    color:var(--text);
-    font-family:'Inter',sans-serif;
-    font-size:14px;
-    line-height:1.5;
-    -webkit-font-smoothing:antialiased;
-  }
-  h1,h2,h3,.serif{ font-family:'Fraunces',serif; font-weight:500; letter-spacing:-0.01em; }
-  .mono{ font-family:'IBM Plex Mono',monospace; }
-  a{color:inherit;}
-  button{font-family:inherit;}
-  ::selection{ background:var(--rose-dim); }
-
-  #app{ display:flex; min-height:100vh; border-top:3px solid var(--teal); }
-
-  /* ---------- NAV ---------- */
-  #nav{
-    width:248px; flex-shrink:0;
-    background:var(--sidebar-bg);
-    border-right:1px solid var(--sidebar-border);
-    display:flex; flex-direction:column;
-    height:100vh; position:sticky; top:0;
-  }
-  .nav-brand{
-    padding:22px 20px 16px;
-    border-bottom:1px solid var(--sidebar-border);
-  }
-  .nav-brand .mark{ font-size:20px; color:var(--sidebar-text); font-weight:600; letter-spacing:.01em; }
-  .nav-brand .mark em{ font-style:italic; color:var(--gold-soft); }
-  .nav-brand .sub{ font-size:10.5px; color:var(--sidebar-text-faint); margin-top:5px; letter-spacing:.1em; text-transform:uppercase; }
-  .nav-search{ padding:14px 16px; border-bottom:1px solid var(--sidebar-border); }
-  .nav-search input{
-    width:100%; background:var(--sidebar-surface); border:1px solid var(--sidebar-border);
-    border-radius:var(--radius-s); padding:7px 10px; color:var(--sidebar-text); font-size:12.5px;
-    outline:none;
-  }
-  .nav-search input::placeholder{ color:var(--sidebar-text-faint); }
-  .nav-search input:focus{ border-color:var(--gold); }
-  .nav-scroll{ flex:1; overflow-y:auto; padding:10px 10px 20px; }
-  .nav-group{ margin-bottom:2px; }
-  .nav-group-label{
-    font-size:10px; text-transform:uppercase; letter-spacing:.09em; color:var(--gold-soft);
-    padding:14px 10px 6px; opacity:.85;
-  }
-  .nav-item{
-    display:flex; align-items:center; justify-content:space-between; gap:8px;
-    padding:8px 10px; border-radius:var(--radius-s); cursor:pointer;
-    color:var(--sidebar-text-dim); font-size:13px; font-weight:500;
-  }
-  .nav-item:hover{ background:var(--sidebar-surface); color:var(--sidebar-text); }
-  .nav-item.active{ background:var(--sidebar-surface); color:var(--sidebar-text); box-shadow:inset 2px 0 0 var(--gold); }
-  .nav-item .count{ font-size:11px; color:var(--sidebar-text-faint); }
-  .nav-item.disabled{ color:var(--sidebar-text-faint); cursor:default; }
-  .nav-item.disabled:hover{ background:none; color:var(--sidebar-text-faint); }
-  .nav-item.nav-parent{ font-weight:600; }
-  .nav-caret{ font-size:11px; color:var(--sidebar-text-faint); transition:transform .12s; display:inline-block; }
-  .nav-caret.open{ transform:rotate(180deg); }
-  .nav-children{ display:flex; flex-direction:column; }
-  .nav-item.nav-child{ padding-left:22px; font-weight:400; }
-  .nav-phase-tag{
-    font-size:9px; padding:1px 5px; border-radius:20px; border:1px solid var(--sidebar-border);
-    color:var(--sidebar-text-faint); letter-spacing:.02em;
-  }
-  .nav-foot{
-    padding:14px 16px; border-top:1px solid var(--sidebar-border);
-    display:flex; align-items:center; gap:9px;
-  }
-  .avatar{
-    width:28px; height:28px; border-radius:50%; background:var(--gold);
-    display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:var(--rose-ink);
-    flex-shrink:0;
-  }
-  .nav-foot .who{ font-size:12.5px; font-weight:600; color:var(--sidebar-text); }
-  .nav-foot .role{ font-size:10.5px; color:var(--sidebar-text-faint); }
-
-  /* ---------- MAIN ---------- */
-  #main{ flex:1; min-width:0; padding:32px 40px 60px; max-width:1180px; }
-  .topline{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:26px; flex-wrap:wrap; gap:10px;}
-  .topline h1{ font-size:26px; margin:0; }
-  .topline .meta{ color:var(--text-dim); font-size:13px; }
-  .breadcrumb{ font-size:12px; color:var(--text-faint); margin-bottom:6px; }
-  .breadcrumb span{ cursor:pointer; }
-  .breadcrumb span:hover{ color:var(--text-dim); }
-
-  .demo-banner{
-    background:var(--amber-dim); border:1px solid #e8d5a8; color:var(--amber);
-    font-size:11.5px; padding:7px 12px; border-radius:var(--radius-s); margin-bottom:22px;
-    display:flex; gap:7px; align-items:center;
-  }
-
-  /* action cards row (legacy grid, kept for other views) */
-  .action-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:10px; margin-bottom:34px; }
-  .action-card{
-    background:var(--surface); border:1px solid var(--border-soft); border-radius:var(--radius-m);
-    padding:14px 15px; cursor:pointer; transition:border-color .15s, transform .15s;
-  }
-  .action-card:hover{ border-color:var(--rose-dim); transform:translateY(-1px); }
-  .action-card .num{ font-family:'Fraunces',serif; font-size:26px; line-height:1; }
-  .action-card.red .num{ color:var(--red); }
-  .action-card.amber .num{ color:var(--amber); }
-  .action-card.green .num{ color:var(--green); }
-  .action-card.neutral .num{ color:var(--text); }
-  .action-card .label{ font-size:12px; color:var(--text-dim); margin-top:5px; }
-
-  /* ---------- Coach-Vault-style dashboard header / pills / collapsible sections ---------- */
-  .dash-header{ display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; margin-bottom:16px; }
-  .dash-header h1{ font-size:30px; text-transform:uppercase; letter-spacing:.01em; margin:0; font-family:'Inter',sans-serif; font-weight:800; }
-  .dash-header .meta{ color:var(--text-dim); font-size:13px; margin-top:4px; }
-  .quick-actions{ display:flex; gap:8px; flex-wrap:wrap; }
-  .qa-btn{
-    border:1px solid var(--border); background:var(--surface); color:var(--text);
-    padding:9px 15px; border-radius:8px; font-size:11.5px; font-weight:700; letter-spacing:.03em;
-    text-transform:uppercase; cursor:pointer; white-space:nowrap;
-  }
-  .qa-btn:hover{ border-color:var(--gold); }
-  .qa-btn.primary{ background:var(--rose); border-color:var(--rose); color:var(--rose-ink); }
-
-  .pill-row{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
-  .pill{
-    display:flex; align-items:center; gap:9px; background:var(--surface); border:1px solid var(--border);
-    border-radius:20px; padding:8px 15px 8px 9px; cursor:pointer; font-size:12.5px;
-  }
-  .pill:hover{ border-color:var(--gold); }
-  .pill .pill-num{ font-weight:800; font-size:14px; width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
-  .pill.red .pill-num{ background:var(--red-dim); color:var(--red); }
-  .pill.amber .pill-num{ background:var(--amber-dim); color:var(--amber); }
-  .pill.neutral .pill-num{ background:var(--surface-raised); color:var(--text-dim); border:1px solid var(--border); }
-  .pill .pill-label{ color:var(--text-dim); }
-  .pill .pill-arrow{ color:var(--text-faint); margin-left:2px; }
-
-  .urgent-banner{
-    display:flex; align-items:center; gap:14px; background:var(--red-dim); border:1px solid #e2c3b8;
-    border-left:4px solid var(--red); border-radius:var(--radius-m); padding:14px 16px; margin-bottom:20px;
-  }
-  .urgent-icon{
-    width:36px; height:36px; border-radius:9px; background:var(--red); color:#fff; flex-shrink:0;
-    display:flex; align-items:center; justify-content:center; font-size:17px;
-  }
-  .urgent-body{ flex:1; min-width:0; }
-  .urgent-title{ font-weight:700; font-size:14.5px; }
-  .urgent-chips{ display:flex; gap:7px; margin-top:8px; flex-wrap:wrap; }
-  .urgent-chip{ font-size:11px; padding:3px 9px; border-radius:20px; background:var(--surface); border:1px solid var(--border); color:var(--text-dim); }
-  .urgent-chip.warn{ color:var(--amber); border-color:#e8d5a8; }
-  .urgent-chip.crit{ color:var(--red); border-color:#e2c3b8; }
-
-  .collapsible{ background:var(--surface); border:1px solid var(--border-soft); border-radius:var(--radius-m); margin-bottom:12px; overflow:hidden; }
-  .collapsible-head{ display:flex; align-items:center; gap:10px; padding:14px 16px; cursor:pointer; }
-  .collapsible-head:hover{ background:var(--surface-raised); }
-  .chevron{ font-size:11px; color:var(--text-faint); width:12px; display:inline-block; transition:transform .12s; }
-  .chevron.open{ transform:rotate(90deg); }
-  .collapsible-title{ font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; }
-  .collapsible-count{ font-size:11px; font-weight:700; background:var(--surface-raised); border:1px solid var(--border); color:var(--text-dim); border-radius:20px; padding:1px 8px; }
-  .collapsible-count.hot{ background:var(--red-dim); color:var(--red); border-color:transparent; }
-  .collapsible-hint{ margin-left:auto; font-size:11px; color:var(--text-faint); }
-  .collapsible-body{ padding:0 16px 14px; }
-
-  .init-avatar{
-    width:34px; height:34px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
-    font-size:12px; font-weight:700; background:var(--surface-raised); border:1px solid var(--border); color:var(--text-dim);
-  }
-  .na-row{ display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid var(--border-soft); }
-  .na-row:first-child{ border-top:none; }
-  .na-row .na-name{ font-weight:600; font-size:13.5px; }
-  .na-row .na-reason{ font-size:12px; color:var(--red); margin-top:2px; }
-  .na-actions{ display:flex; gap:7px; }
-
-  .board-row{ display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid var(--border-soft); }
-  .board-row:first-child{ border-top:none; }
-  .board-row .name{ font-weight:600; font-size:13.5px; flex:1; }
-  .flag-dots{ display:flex; gap:3px; }
-  .flag-dots span{ width:7px; height:7px; border-radius:50%; background:var(--border); }
-  .flag-dots span.on{ background:var(--red); }
-  .board-num{ font-weight:800; color:var(--red); width:16px; text-align:center; }
-  .board-last{ color:var(--text-faint); font-size:12px; width:52px; text-align:right; }
-  .board-foot{ text-align:center; padding-top:10px; font-size:12px; color:var(--text-dim); cursor:pointer; }
-  .board-foot:hover{ color:var(--gold); }
-
-  .team-bar-wrap{ padding:2px 0 4px; }
-  .team-bar-head{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
-  .role-tag{ font-size:10.5px; font-weight:700; color:var(--red); background:var(--red-dim); padding:2px 8px; border-radius:20px; }
-  .attn-tag{ font-size:11px; font-weight:700; color:var(--amber); background:var(--amber-dim); padding:2px 9px; border-radius:20px; margin-left:auto; }
-  .team-bar{ height:6px; border-radius:6px; overflow:hidden; display:flex; background:var(--border-soft); }
-  .team-bar .seg.green{ background:var(--green); }
-  .team-bar .seg.amber{ background:var(--amber); }
-  .team-bar .seg.red{ background:var(--red); }
-
-  .section-label{
-    font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-faint);
-    margin:32px 0 12px; display:flex; align-items:center; justify-content:space-between;
-  }
-
-  /* action required list */
-  .req-list{ display:flex; flex-direction:column; gap:8px; margin-bottom:10px; }
-  .req-row{
-    background:var(--surface); border:1px solid var(--border-soft); border-radius:var(--radius-m);
-    padding:12px 14px; display:flex; align-items:center; gap:12px;
-  }
-  .dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
-  .dot.red{ background:var(--red); box-shadow:0 0 0 4px var(--red-dim); }
-  .dot.amber{ background:var(--amber); box-shadow:0 0 0 4px var(--amber-dim); }
-  .dot.green{ background:var(--green); box-shadow:0 0 0 4px var(--green-dim); }
-  .req-body{ flex:1; min-width:0; }
-  .req-title{ font-size:13.5px; font-weight:500; }
-  .req-sub{ font-size:12px; color:var(--text-dim); margin-top:2px; }
-  .btn{
-    border:1px solid var(--border); background:var(--surface-raised); color:var(--text);
-    padding:6px 12px; border-radius:var(--radius-s); font-size:12px; font-weight:600; cursor:pointer;
-    white-space:nowrap;
-  }
-  .btn:hover{ border-color:var(--rose-dim); }
-  .btn.primary{ background:var(--rose); border-color:var(--rose); color:var(--rose-ink); }
-  .btn.primary:hover{ background:var(--gold-soft); }
-  .btn.ghost{ background:transparent; }
-  .btn.small{ padding:4px 9px; font-size:11px; }
-  .empty-state{
-    border:1px dashed var(--border); border-radius:var(--radius-m); padding:22px;
-    text-align:center; color:var(--text-faint); font-size:13px;
-  }
-
-  /* new students */
-  .onboard-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:10px; }
-  .onboard-card{ background:var(--surface); border:1px solid var(--border-soft); border-radius:var(--radius-m); padding:13px 14px; cursor:pointer; }
-  .onboard-card:hover{ border-color:var(--rose-dim); }
-  .onboard-card .name{ font-weight:600; font-size:13.5px; margin-bottom:8px; }
-  .steps{ display:flex; flex-direction:column; gap:4px; }
-  .step{ font-size:11.5px; display:flex; align-items:center; gap:6px; color:var(--text-dim); }
-  .step .icon{ width:14px; text-align:center; font-size:11px; }
-  .step.ok .icon{ color:var(--green); }
-  .step.pending .icon{ color:var(--amber); }
-  .step.fail .icon{ color:var(--red); }
-
-  /* board columns */
-  .board{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
-  .board-col{ background:var(--surface); border:1px solid var(--border-soft); border-radius:var(--radius-m); padding:12px; }
-  .board-col h4{ margin:2px 4px 10px; font-size:12px; text-transform:uppercase; letter-spacing:.06em; font-weight:600; }
-  .board-col.on-track h4{ color:var(--green); }
-  .board-col.needs h4{ color:var(--amber); }
-  .board-col.risk h4{ color:var(--red); }
-  .board-card{
-    background:var(--surface-raised); border:1px solid var(--border-soft); border-radius:var(--radius-s);
-    padding:9px 10px; font-size:12.5px; margin-bottom:7px; cursor:pointer;
-  }
-  .board-card:hover{ border-color:var(--rose-dim); }
-  .board-card .biz{ color:var(--text-faint); font-size:11px; margin-top:2px; }
-
-  /* table */
-  table{ width:100%; border-collapse:collapse; font-size:13px; }
-  thead th{
-    text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--text-faint);
-    font-weight:600; padding:8px 10px; border-bottom:1px solid var(--border-soft);
-  }
-  tbody td{ padding:11px 10px; border-bottom:1px solid var(--border-soft); vertical-align:middle; }
-  tbody tr{ cursor:pointer; }
-  tbody tr:hover td{ background:var(--surface); }
-  .badge{
-    display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600;
-    padding:3px 9px; border-radius:20px;
-  }
-  .badge.green{ background:var(--green-dim); color:var(--green); }
-  .badge.amber{ background:var(--amber-dim); color:var(--amber); }
-  .badge.red{ background:var(--red-dim); color:var(--red); }
-  .badge.neutral{ background:var(--surface-raised); color:var(--text-dim); border:1px solid var(--border); }
-
-  .filter-row{ display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; align-items:center; }
-  .chip{
-    padding:6px 13px; border-radius:20px; font-size:12px; font-weight:600; cursor:pointer;
-    border:1px solid var(--border); color:var(--text-dim);
-  }
-  .chip:hover{ color:var(--text); }
-  .chip.active{ background:var(--rose); border-color:var(--rose); color:var(--rose-ink); }
-  .search-box{
-    margin-left:auto; background:var(--surface-raised); border:1px solid var(--border); border-radius:var(--radius-s);
-    padding:6px 11px; font-size:12.5px; color:var(--text); min-width:200px; outline:none;
-  }
-  .search-box:focus{ border-color:var(--rose-dim); }
-
-  /* profile */
-  .profile-head{
-    display:flex; justify-content:space-between; align-items:flex-start; gap:20px;
-    background:var(--surface); border:1px solid var(--border-soft); border-radius:var(--radius-l);
-    padding:22px 24px; margin-bottom:18px; flex-wrap:wrap;
-  }
-  .profile-head .p-name{ font-size:22px; margin:0 0 4px; }
-  .profile-head .p-biz{ color:var(--text-dim); font-size:13px; margin-bottom:2px; }
-  .profile-head .p-contact{ color:var(--text-faint); font-size:12px; }
-  .profile-meta{ display:flex; gap:26px; margin-top:14px; flex-wrap:wrap; }
-  .profile-meta .m{ font-size:12px; }
-  .profile-meta .m .k{ color:var(--text-faint); display:block; margin-bottom:2px; font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; }
-  .profile-actions{ display:flex; gap:8px; flex-wrap:wrap; }
-
-  .next-action{
-    background:var(--red-dim); border:1px solid #4a2c26; border-radius:var(--radius-m);
-    padding:14px 16px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; gap:14px; flex-wrap:wrap;
-  }
-  .next-action.amber{ background:var(--amber-dim); border-color:#4a3d24; }
-  .next-action.green{ background:var(--green-dim); border-color:#274539; }
-  .next-action .na-label{ font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-faint); margin-bottom:4px; }
-  .next-action .na-text{ font-size:13.5px; }
-
-  .tabs{ display:flex; gap:4px; border-bottom:1px solid var(--border-soft); margin-bottom:20px; flex-wrap:wrap; }
-  .tab{ padding:9px 14px; font-size:13px; font-weight:500; color:var(--text-faint); cursor:pointer; border-bottom:2px solid transparent; }
-  .tab:hover{ color:var(--text-dim); }
-  .tab.active{ color:var(--text); border-bottom-color:var(--rose); }
-
-  .card{ background:var(--surface); border:1px solid var(--border-soft); border-radius:var(--radius-m); padding:16px 18px; margin-bottom:14px; }
-  .card h3{ font-size:13px; margin:0 0 10px; text-transform:uppercase; letter-spacing:.04em; color:var(--text-dim); font-family:'Inter'; font-weight:600; }
-  .kv{ display:grid; grid-template-columns:1fr 1fr; gap:10px 20px; }
-  .kv .item .k{ font-size:11px; color:var(--text-faint); margin-bottom:2px; }
-  .kv .item .v{ font-size:13.5px; }
-
-  .note{ padding:10px 0; border-bottom:1px solid var(--border-soft); font-size:13px; }
-  .note:last-child{ border-bottom:none; }
-  .note .note-meta{ font-size:11px; color:var(--text-faint); margin-top:4px; }
-  .note-input{ display:flex; gap:8px; margin-top:12px; }
-  .note-input textarea{
-    flex:1; background:var(--surface-raised); border:1px solid var(--border); border-radius:var(--radius-s);
-    color:var(--text); padding:8px 10px; font-family:inherit; font-size:12.5px; resize:vertical; min-height:36px;
-  }
-
-  .placeholder-block{
-    border:1px dashed var(--border); border-radius:var(--radius-m); padding:40px 20px; text-align:center;
-  }
-  .placeholder-block .pt{ font-size:14px; color:var(--text-dim); margin-bottom:6px; }
-  .placeholder-block .ps{ font-size:12px; color:var(--text-faint); max-width:420px; margin:0 auto; }
-
-  .task-row{ display:flex; align-items:center; gap:12px; padding:10px 4px; border-bottom:1px solid var(--border-soft); }
-  .task-row:last-child{ border-bottom:none; }
-
-  /* ---------- Communications ---------- */
-  .comms-layout{ display:grid; grid-template-columns:340px 1fr; gap:16px; align-items:start; }
-  .comms-list{ background:var(--surface); border:1px solid var(--border-soft); border-radius:var(--radius-m); overflow:hidden; }
-  .comms-row{ display:flex; gap:10px; padding:12px 14px; border-bottom:1px solid var(--border-soft); cursor:pointer; align-items:flex-start; }
-  .comms-row:last-child{ border-bottom:none; }
-  .comms-row:hover{ background:var(--surface-raised); }
-  .comms-row.active{ background:var(--surface-raised); box-shadow:inset 3px 0 0 var(--gold); }
-  .comms-row .cr-body{ flex:1; min-width:0; }
-  .comms-row .cr-name{ font-size:13px; font-weight:600; display:flex; justify-content:space-between; gap:8px; }
-  .comms-row .cr-name .unread-dot{ width:7px; height:7px; border-radius:50%; background:var(--red); flex-shrink:0; margin-top:5px; }
-  .comms-row .cr-preview{ font-size:12px; color:var(--text-dim); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .comms-row .cr-time{ font-size:10.5px; color:var(--text-faint); white-space:nowrap; }
-  .comms-thread{ background:var(--surface); border:1px solid var(--border-soft); border-radius:var(--radius-m); padding:18px 20px; min-height:360px; display:flex; flex-direction:column; }
-  .comms-thread-head{ display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-soft); padding-bottom:12px; margin-bottom:14px; }
-  .comms-thread-head .th-name{ font-size:15px; font-weight:600; }
-  .comms-thread-head .th-sub{ font-size:11.5px; color:var(--text-faint); margin-top:2px; }
-  .comms-msgs{ flex:1; display:flex; flex-direction:column; gap:10px; margin-bottom:14px; }
-  .msg-bubble{ max-width:72%; padding:9px 13px; border-radius:12px; font-size:13px; line-height:1.4; }
-  .msg-bubble.student{ align-self:flex-start; background:var(--surface-raised); border:1px solid var(--border); border-bottom-left-radius:3px; }
-  .msg-bubble.team{ align-self:flex-end; background:var(--rose); color:var(--rose-ink); border-bottom-right-radius:3px; }
-  .msg-time{ font-size:10px; color:var(--text-faint); margin-top:3px; }
-  .msg-bubble.team + .msg-time{ align-self:flex-end; }
-  .comms-reply{ display:flex; gap:8px; border-top:1px solid var(--border-soft); padding-top:12px; }
-  .comms-reply input{ flex:1; background:var(--surface-raised); border:1px solid var(--border); border-radius:20px; padding:9px 15px; color:var(--text); font-size:13px; outline:none; }
-  .comms-reply input:focus{ border-color:var(--gold); }
-
-  .comms-login{max-width:460px;margin:30px auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-m);padding:24px;}
-  .comms-login h2{margin:0 0 6px;font-size:18px;}
-  .comms-login p{color:var(--text-dim);font-size:12.5px;line-height:1.5;margin:0 0 18px;}
-  .comms-login .field{margin-bottom:12px;}
-  .comms-login label{display:block;font-size:11px;color:var(--text-faint);margin-bottom:5px;}
-  .comms-login input{width:100%;box-sizing:border-box;background:var(--surface-raised);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);outline:none;}
-  .comms-login input:focus{border-color:var(--gold);}
-  .comms-loading{padding:40px;text-align:center;color:var(--text-faint);font-size:13px;}
-  .comms-error{padding:18px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-m);color:var(--text-dim);font-size:12.5px;line-height:1.5;}
-  .conn-banner{
-    display:flex; align-items:center; gap:12px; background:var(--surface); border:1px solid var(--border);
-    border-radius:var(--radius-m); padding:12px 16px; margin-bottom:18px;
-  }
-  .conn-dot{ width:9px; height:9px; border-radius:50%; background:var(--amber); flex-shrink:0; box-shadow:0 0 0 3px var(--amber-dim); }
-  .conn-text{ font-size:12.5px; color:var(--text-dim); flex:1; }
-  .conn-text b{ color:var(--text); }
-  .task-check{ width:16px; height:16px; border-radius:4px; border:1px solid var(--border); flex-shrink:0; cursor:pointer; }
-  .task-check.done{ background:var(--green); border-color:var(--green); }
-  .task-title{ flex:1; font-size:13px; }
-  .task-title.done{ text-decoration:line-through; color:var(--text-faint); }
-  .priority-tag{ font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:20px; text-transform:uppercase; letter-spacing:.03em; }
-  .priority-tag.Urgent{ background:var(--red-dim); color:var(--red); }
-  .priority-tag.High{ background:var(--amber-dim); color:var(--amber); }
-  .priority-tag.Normal{ background:var(--surface-raised); color:var(--text-dim); border:1px solid var(--border); }
-
-  .log-row{ display:flex; gap:12px; padding:9px 4px; font-size:12.5px; border-bottom:1px solid var(--border-soft); }
-  .log-row:last-child{ border-bottom:none; }
-  .log-time{ color:var(--text-faint); width:100px; flex-shrink:0; font-size:11.5px; }
-
-  @media (max-width:900px){
-    #nav{ display:none; }
-    #main{ padding:20px; }
-    .board{ grid-template-columns:1fr; }
-  }
+  :root{--bg:#f1ece2;--surface:#ffffff;--surface-raised:#faf7ef;--border:#e4ddcc;--border-soft:#e9e2d2;--text:#201e1a;--text-dim:#6b6558;--text-faint:#9b9483;--sidebar-bg:#101010;--sidebar-surface:#1a1a1a;--sidebar-border:#2a2a28;--sidebar-text:#f1ece2;--sidebar-text-dim:#b5ad99;--sidebar-text-faint:#7a7466;--gold:#ad8a55;--gold-soft:#cbb383;--teal:#2f6e6b;--rose:#ad8a55;--rose-dim:#cbb383;--rose-ink:#1c1712;--green:#4c7d5e;--green-dim:#e4ecdf;--amber:#ad7f2c;--amber-dim:#f3e8cf;--red:#ac4c3c;--red-dim:#f5e0da;--radius-s:6px;--radius-m:10px;--radius-l:16px;}
+  *{box-sizing:border-box;} html,body{margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;}
+  h1,h2,h3,.serif{font-family:'Fraunces',serif;font-weight:500;letter-spacing:-0.01em;} a{color:inherit;} button{font-family:inherit;}
+  #app{display:flex;min-height:100vh;border-top:3px solid var(--teal);}
+  #nav{width:248px;flex-shrink:0;background:var(--sidebar-bg);border-right:1px solid var(--sidebar-border);display:flex;flex-direction:column;height:100vh;position:sticky;top:0;}
+  .nav-brand{padding:22px 20px 16px;border-bottom:1px solid var(--sidebar-border);}
+  .nav-brand .mark{font-size:20px;color:var(--sidebar-text);font-weight:600;} .nav-brand .mark em{font-style:italic;color:var(--gold-soft);}
+  .nav-brand .sub{font-size:10.5px;color:var(--sidebar-text-faint);margin-top:5px;letter-spacing:.1em;text-transform:uppercase;}
+  .nav-search{padding:14px 16px;border-bottom:1px solid var(--sidebar-border);}
+  .nav-search input{width:100%;background:var(--sidebar-surface);border:1px solid var(--sidebar-border);border-radius:6px;padding:7px 10px;color:var(--sidebar-text);font-size:12.5px;outline:none;}
+  .nav-scroll{flex:1;overflow-y:auto;padding:10px 10px 20px;}
+  .nav-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:6px;cursor:pointer;color:var(--sidebar-text-dim);font-size:13px;font-weight:500;}
+  .nav-item:hover{background:var(--sidebar-surface);color:var(--sidebar-text);}
+  .nav-item.active{background:var(--sidebar-surface);color:var(--sidebar-text);box-shadow:inset 2px 0 0 var(--gold);}
+  .nav-item .count{font-size:11px;color:var(--sidebar-text-faint);} .nav-item.nav-parent{font-weight:600;}
+  .nav-caret{font-size:11px;color:var(--sidebar-text-faint);transition:transform .12s;display:inline-block;} .nav-caret.open{transform:rotate(180deg);}
+  .nav-item.nav-child{padding-left:22px;font-weight:400;}
+  .nav-foot{padding:14px 16px;border-top:1px solid var(--sidebar-border);display:flex;align-items:center;gap:9px;}
+  .avatar{width:28px;height:28px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--rose-ink);flex-shrink:0;}
+  .nav-foot .who{font-size:12.5px;font-weight:600;color:var(--sidebar-text);} .nav-foot .role{font-size:10.5px;color:var(--sidebar-text-faint);}
+  #main{flex:1;min-width:0;padding:32px 40px 60px;max-width:1180px;}
+  .topline{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:26px;flex-wrap:wrap;gap:10px;}
+  .topline h1{font-size:26px;margin:0;} .topline .meta{color:var(--text-dim);font-size:13px;}
+  .breadcrumb{font-size:12px;color:var(--text-faint);margin-bottom:6px;} .breadcrumb span{cursor:pointer;}
+  .demo-banner{background:var(--amber-dim);border:1px solid #e8d5a8;color:var(--amber);font-size:11.5px;padding:7px 12px;border-radius:6px;margin-bottom:22px;display:flex;gap:7px;align-items:center;}
+  .dash-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:16px;}
+  .dash-header h1{font-size:30px;text-transform:uppercase;margin:0;font-family:'Inter',sans-serif;font-weight:800;} .dash-header .meta{color:var(--text-dim);font-size:13px;margin-top:4px;}
+  .quick-actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .qa-btn{border:1px solid var(--border);background:var(--surface);color:var(--text);padding:9px 15px;border-radius:8px;font-size:11.5px;font-weight:700;text-transform:uppercase;cursor:pointer;white-space:nowrap;}
+  .qa-btn.primary{background:var(--rose);border-color:var(--rose);color:var(--rose-ink);}
+  .pill-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+  .pill{display:flex;align-items:center;gap:9px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:8px 15px 8px 9px;cursor:pointer;font-size:12.5px;}
+  .pill .pill-num{font-weight:800;font-size:14px;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+  .pill.red .pill-num{background:var(--red-dim);color:var(--red);} .pill.amber .pill-num{background:var(--amber-dim);color:var(--amber);}
+  .pill.neutral .pill-num{background:var(--surface-raised);color:var(--text-dim);border:1px solid var(--border);} .pill .pill-label{color:var(--text-dim);}
+  .urgent-banner{display:flex;align-items:center;gap:14px;background:var(--red-dim);border:1px solid #e2c3b8;border-left:4px solid var(--red);border-radius:10px;padding:14px 16px;margin-bottom:20px;}
+  .urgent-icon{width:36px;height:36px;border-radius:9px;background:var(--red);color:#fff;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:17px;}
+  .urgent-body{flex:1;min-width:0;} .urgent-title{font-weight:700;font-size:14.5px;} .urgent-chips{display:flex;gap:7px;margin-top:8px;flex-wrap:wrap;}
+  .urgent-chip{font-size:11px;padding:3px 9px;border-radius:20px;background:var(--surface);border:1px solid var(--border);color:var(--text-dim);}
+  .urgent-chip.warn{color:var(--amber);border-color:#e8d5a8;} .urgent-chip.crit{color:var(--red);border-color:#e2c3b8;}
+  .collapsible{background:var(--surface);border:1px solid var(--border-soft);border-radius:10px;margin-bottom:12px;overflow:hidden;}
+  .collapsible-head{display:flex;align-items:center;gap:10px;padding:14px 16px;cursor:pointer;} .collapsible-head:hover{background:var(--surface-raised);}
+  .chevron{font-size:11px;color:var(--text-faint);width:12px;display:inline-block;transition:transform .12s;} .chevron.open{transform:rotate(90deg);}
+  .collapsible-title{font-size:12px;font-weight:700;text-transform:uppercase;}
+  .collapsible-count{font-size:11px;font-weight:700;background:var(--surface-raised);border:1px solid var(--border);color:var(--text-dim);border-radius:20px;padding:1px 8px;}
+  .collapsible-count.hot{background:var(--red-dim);color:var(--red);border-color:transparent;} .collapsible-hint{margin-left:auto;font-size:11px;color:var(--text-faint);} .collapsible-body{padding:0 16px 14px;}
+  .init-avatar{width:34px;height:34px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:var(--surface-raised);border:1px solid var(--border);color:var(--text-dim);}
+  .na-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--border-soft);} .na-row:first-child{border-top:none;}
+  .na-row .na-name{font-weight:600;font-size:13.5px;} .na-row .na-reason{font-size:12px;color:var(--red);margin-top:2px;} .na-actions{display:flex;gap:7px;}
+  .board-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--border-soft);} .board-row:first-child{border-top:none;}
+  .board-row .name{font-weight:600;font-size:13.5px;flex:1;} .flag-dots{display:flex;gap:3px;} .flag-dots span{width:7px;height:7px;border-radius:50%;background:var(--border);} .flag-dots span.on{background:var(--red);}
+  .board-num{font-weight:800;color:var(--red);width:16px;text-align:center;} .board-last{color:var(--text-faint);font-size:12px;width:52px;text-align:right;} .board-foot{text-align:center;padding-top:10px;font-size:12px;color:var(--text-dim);cursor:pointer;}
+  .team-bar-wrap{padding:2px 0 4px;} .team-bar-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+  .role-tag{font-size:10.5px;font-weight:700;color:var(--red);background:var(--red-dim);padding:2px 8px;border-radius:20px;}
+  .attn-tag{font-size:11px;font-weight:700;color:var(--amber);background:var(--amber-dim);padding:2px 9px;border-radius:20px;margin-left:auto;}
+  .team-bar{height:6px;border-radius:6px;overflow:hidden;display:flex;background:var(--border-soft);} .team-bar .seg.green{background:var(--green);} .team-bar .seg.amber{background:var(--amber);} .team-bar .seg.red{background:var(--red);}
+  .btn{border:1px solid var(--border);background:var(--surface-raised);color:var(--text);padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;}
+  .btn.primary{background:var(--rose);border-color:var(--rose);color:var(--rose-ink);} .btn.ghost{background:transparent;} .btn.small{padding:4px 9px;font-size:11px;}
+  .empty-state{border:1px dashed var(--border);border-radius:10px;padding:22px;text-align:center;color:var(--text-faint);font-size:13px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  thead th{text-align:left;font-size:11px;text-transform:uppercase;color:var(--text-faint);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--border-soft);}
+  tbody td{padding:11px 10px;border-bottom:1px solid var(--border-soft);vertical-align:middle;} tbody tr{cursor:pointer;} tbody tr:hover td{background:var(--surface);}
+  .badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;}
+  .badge.green{background:var(--green-dim);color:var(--green);} .badge.amber{background:var(--amber-dim);color:var(--amber);} .badge.red{background:var(--red-dim);color:var(--red);} .badge.neutral{background:var(--surface-raised);color:var(--text-dim);border:1px solid var(--border);}
+  .filter-row{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
+  .chip{padding:6px 13px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);color:var(--text-dim);} .chip.active{background:var(--rose);border-color:var(--rose);color:var(--rose-ink);}
+  .search-box{margin-left:auto;background:var(--surface-raised);border:1px solid var(--border);border-radius:6px;padding:6px 11px;font-size:12.5px;color:var(--text);min-width:200px;outline:none;}
+  .profile-head{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;background:var(--surface);border:1px solid var(--border-soft);border-radius:16px;padding:22px 24px;margin-bottom:18px;flex-wrap:wrap;}
+  .profile-head .p-name{font-size:22px;margin:0 0 4px;} .profile-head .p-biz{color:var(--text-dim);font-size:13px;margin-bottom:2px;} .profile-head .p-contact{color:var(--text-faint);font-size:12px;}
+  .profile-meta{display:flex;gap:26px;margin-top:14px;flex-wrap:wrap;} .profile-meta .m{font-size:12px;} .profile-meta .m .k{color:var(--text-faint);display:block;margin-bottom:2px;font-size:10.5px;text-transform:uppercase;} .profile-actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .next-action{background:var(--red-dim);border:1px solid #4a2c26;border-radius:10px;padding:14px 16px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;}
+  .next-action .na-label{font-size:10.5px;text-transform:uppercase;color:var(--text-faint);margin-bottom:4px;} .next-action .na-text{font-size:13.5px;}
+  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--border-soft);margin-bottom:20px;flex-wrap:wrap;}
+  .tab{padding:9px 14px;font-size:13px;font-weight:500;color:var(--text-faint);cursor:pointer;border-bottom:2px solid transparent;} .tab.active{color:var(--text);border-bottom-color:var(--rose);}
+  .card{background:var(--surface);border:1px solid var(--border-soft);border-radius:10px;padding:16px 18px;margin-bottom:14px;}
+  .card h3{font-size:13px;margin:0 0 10px;text-transform:uppercase;color:var(--text-dim);font-family:'Inter';font-weight:600;}
+  .kv{display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;} .kv .item .k{font-size:11px;color:var(--text-faint);margin-bottom:2px;} .kv .item .v{font-size:13.5px;}
+  .note{padding:10px 0;border-bottom:1px solid var(--border-soft);font-size:13px;} .note .note-meta{font-size:11px;color:var(--text-faint);margin-top:4px;}
+  .note-input{display:flex;gap:8px;margin-top:12px;} .note-input textarea{flex:1;background:var(--surface-raised);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:8px 10px;font-family:inherit;font-size:12.5px;resize:vertical;min-height:36px;}
+  .placeholder-block{border:1px dashed var(--border);border-radius:10px;padding:40px 20px;text-align:center;} .placeholder-block .pt{font-size:14px;color:var(--text-dim);margin-bottom:6px;} .placeholder-block .ps{font-size:12px;color:var(--text-faint);max-width:420px;margin:0 auto;}
+  .task-row{display:flex;align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid var(--border-soft);}
+  .comms-layout{display:grid;grid-template-columns:340px 1fr;gap:16px;align-items:start;}
+  .comms-list{background:var(--surface);border:1px solid var(--border-soft);border-radius:10px;overflow:hidden;}
+  .comms-row{display:flex;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border-soft);cursor:pointer;align-items:flex-start;} .comms-row:hover{background:var(--surface-raised);} .comms-row.active{background:var(--surface-raised);box-shadow:inset 3px 0 0 var(--gold);}
+  .comms-row .cr-body{flex:1;min-width:0;} .comms-row .cr-name{font-size:13px;font-weight:600;display:flex;justify-content:space-between;gap:8px;}
+  .comms-row .cr-name .unread-dot{width:7px;height:7px;border-radius:50%;background:var(--red);flex-shrink:0;margin-top:5px;}
+  .comms-row .cr-preview{font-size:12px;color:var(--text-dim);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;} .comms-row .cr-time{font-size:10.5px;color:var(--text-faint);white-space:nowrap;}
+  .comms-thread{background:var(--surface);border:1px solid var(--border-soft);border-radius:10px;padding:18px 20px;min-height:360px;display:flex;flex-direction:column;}
+  .comms-thread-head{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border-soft);padding-bottom:12px;margin-bottom:14px;}
+  .comms-thread-head .th-name{font-size:15px;font-weight:600;} .comms-thread-head .th-sub{font-size:11.5px;color:var(--text-faint);margin-top:2px;}
+  .comms-msgs{flex:1;display:flex;flex-direction:column;gap:10px;margin-bottom:14px;}
+  .msg-bubble{max-width:72%;padding:9px 13px;border-radius:12px;font-size:13px;line-height:1.4;}
+  .msg-bubble.student{align-self:flex-start;background:var(--surface-raised);border:1px solid var(--border);border-bottom-left-radius:3px;}
+  .msg-bubble.team{align-self:flex-end;background:var(--rose);color:var(--rose-ink);border-bottom-right-radius:3px;} .msg-time{font-size:10px;color:var(--text-faint);margin-top:3px;}
+  .comms-reply{display:flex;gap:8px;border-top:1px solid var(--border-soft);padding-top:12px;}
+  .comms-reply input{flex:1;background:var(--surface-raised);border:1px solid var(--border);border-radius:20px;padding:9px 15px;color:var(--text);font-size:13px;outline:none;}
+  .conn-banner{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:18px;}
+  .conn-dot{width:9px;height:9px;border-radius:50%;background:var(--amber);flex-shrink:0;box-shadow:0 0 0 3px var(--amber-dim);} .conn-text{font-size:12.5px;color:var(--text-dim);flex:1;} .conn-text b{color:var(--text);}
+  .task-check{width:16px;height:16px;border-radius:4px;border:1px solid var(--border);flex-shrink:0;cursor:pointer;} .task-check.done{background:var(--green);border-color:var(--green);}
+  .task-title{flex:1;font-size:13px;} .task-title.done{text-decoration:line-through;color:var(--text-faint);}
+  .priority-tag{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase;} .priority-tag.Urgent{background:var(--red-dim);color:var(--red);} .priority-tag.High{background:var(--amber-dim);color:var(--amber);} .priority-tag.Normal{background:var(--surface-raised);color:var(--text-dim);border:1px solid var(--border);}
+  .log-row{display:flex;gap:12px;padding:9px 4px;font-size:12.5px;border-bottom:1px solid var(--border-soft);} .log-time{color:var(--text-faint);width:100px;flex-shrink:0;font-size:11.5px;}
+  .scope-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}.scope-card{background:var(--surface);border:1px solid var(--border-soft);border-radius:12px;padding:16px}.scope-num{font-family:'Fraunces',serif;font-size:25px}.scope-label{font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.04em}.scope-sub{font-size:12px;color:var(--text-dim);margin-top:4px}
+  @media (max-width:900px){#nav{display:none;}#main{padding:20px;}.scope-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
 </style>
 </head>
 <body>
 <div id="app"></div>
-
 <script>
-/* =========================================================
-   BTM OPERATIONS HQ — Phase 1 (Core Operations)
-   Most operational data below remains DEMO data for development.
-   Communications is connected to the live BTM messaging API when configured.
-   Shopify / Stripe / Calendar / student-platform integrations remain pending.
-   ========================================================= */
-
-// ---------- DEMO DATA ----------
-let state = {
-  route: { view: 'dashboard', id: null },
-  studentFilter: 'all',
-  studentSearch: '',
-  renewalFilter: 'all',
-  commsOpenId: null,
-  navExpanded: { library:true, business:true, internal:false },
-  profileTab: 'overview',
-  collapsed: { checkins:false, needsaction:false, newstudents:false, board:false, team:false },
-};
-
-const team = [
-  { id:'t1', name:'Christine (You)', role:'Operations', clients:12 },
-  { id:'t2', name:'Demo Coach — Alex', role:'Coach/Advisor', clients:9 },
-];
-
-const customers = [
-  {
-    id:'c1', name:'Sarah Whitfield (Demo Student)', business:'Test Business — Whitfield Beauty', email:'sarah@example.com', phone:'—',
-    program:'Business Advisory & Support', level:'Level 1', assigned:'t1', status:'Active',
-    lastActivity:'2 days ago', board:'needs', enrolledDaysAgo:3, renewalDaysLeft:88,
-    onboarding:{ purchase:true, access:true, onboarding:true, audit:'pending' },
-    audit:{ status:'Submitted', submittedAt:'2 days ago', deadlineHoursLeft:24 },
-    supportPlan:{ status:'In Progress', goals:[{goal:'Increase monthly bookings by 20%', priority:'High', target:'6 weeks', status:'In Progress'}] },
-    checkIn:{ status:'Not Due' },
-    powerSession:{ status:'Needs Booking' },
-    payment:'Current',
-    notes:[{ text:'Initial audit call went well — strong on services, weak on retention systems.', author:'Christine', when:'2 days ago' }],
-    comms:{ status:'unanswered', lastFrom:'student', lastAt:'4 days ago',
-      thread:[
-        { from:'student', text:'Hi! Just submitted my business audit — how long until I hear back on my support plan?', time:'2 days ago' },
-        { from:'student', text:'Also, is the Power Session booking link broken? It won\'t load for me.', time:'4 days ago' },
-      ]}
-  },
-  {
-    id:'c2', name:'Jessica Ann Reyes (Demo Student)', business:'Example Client — J.Reyes Studio', email:'jessica@example.com', phone:'—',
-    program:'Business Advisory & Support', level:'Level 1', assigned:'t2', status:'Active',
-    lastActivity:'5 days ago', board:'risk', enrolledDaysAgo:9, renewalDaysLeft:82,
-    onboarding:{ purchase:true, access:true, onboarding:true, audit:'fail' },
-    audit:{ status:'Not Sent', submittedAt:null, deadlineHoursLeft:null },
-    supportPlan:{ status:'Not Started', goals:[] },
-    checkIn:{ status:'Overdue' },
-    powerSession:{ status:'Needs Booking' },
-    payment:'Current',
-    notes:[],
-    comms:{ status:'unread', lastFrom:'student', lastAt:'5 days ago',
-      thread:[
-        { from:'student', text:'I logged in but I don\'t see where to fill out the business audit — is that live yet?', time:'5 days ago' },
-      ]}
-  },
-  {
-    id:'c3', name:'Emma Delacroix (Demo Client)', business:'Demo Business — Delacroix Lash Co.', email:'emma@example.com', phone:'—',
-    program:'Scale Society', level:'Level 2', assigned:'t1', status:'Payment Issue',
-    lastActivity:'1 day ago', board:'risk', enrolledDaysAgo:120, renewalDaysLeft:6,
-    onboarding:{ purchase:true, access:true, onboarding:true, audit:'ok' },
-    audit:{ status:'Reviewed', submittedAt:'3 months ago', deadlineHoursLeft:null },
-    supportPlan:{ status:'Completed', goals:[{goal:'Hire 2nd technician', priority:'Normal', target:'Q3', status:'Completed'}] },
-    checkIn:{ status:'Submitted' },
-    powerSession:{ status:'Completed' },
-    payment:'Failed',
-    notes:[{ text:'Card declined twice — reaching out before pausing access.', author:'Alex', when:'1 day ago' }],
-    comms:{ status:'answered', lastFrom:'team', lastAt:'1 day ago',
-      thread:[
-        { from:'student', text:'My card got declined again — can you check what\'s going on with my subscription?', time:'2 days ago' },
-        { from:'team', text:'Looking into it now, Emma — will update you today.', time:'1 day ago' },
-      ]}
-  },
-  {
-    id:'c4', name:'Priya Nakamura (Demo Student)', business:'Test Business — Nakamura Brows', email:'priya@example.com', phone:'—',
-    program:'Business Advisory & Support', level:'Level 1', assigned:'t2', status:'Active',
-    lastActivity:'Today', board:'on-track', enrolledDaysAgo:30, renewalDaysLeft:25,
-    onboarding:{ purchase:true, access:true, onboarding:true, audit:'ok' },
-    audit:{ status:'Reviewed', submittedAt:'3 weeks ago', deadlineHoursLeft:null },
-    supportPlan:{ status:'In Progress', goals:[{goal:'Launch referral program', priority:'Normal', target:'2 weeks', status:'In Progress'}] },
-    checkIn:{ status:'Submitted' },
-    powerSession:{ status:'Booked' },
-    payment:'Current',
-    notes:[],
-    comms:{ status:'answered', lastFrom:'team', lastAt:'Today',
-      thread:[
-        { from:'student', text:'Confirming my Power Session is still on for Thursday?', time:'Today' },
-        { from:'team', text:'Yes, confirmed — see you then!', time:'Today' },
-      ]}
-  },
-  {
-    id:'c5', name:'Maya Torres (Demo Client)', business:'Example Client — Torres Aesthetics', email:'maya@example.com', phone:'—',
-    program:'Scale Society', level:'Level 2', assigned:'t1', status:'Active', educatorPathway:true,
-    lastActivity:'4 days ago', board:'on-track', enrolledDaysAgo:210, renewalDaysLeft:55,
-    onboarding:{ purchase:true, access:true, onboarding:true, audit:'ok' },
-    audit:{ status:'Reviewed', submittedAt:'6 months ago', deadlineHoursLeft:null },
-    supportPlan:{ status:'Completed', goals:[] },
-    checkIn:{ status:'Submitted' },
-    powerSession:{ status:'Completed' },
-    payment:'Current',
-    notes:[],
-    comms:{ status:'none', lastFrom:null, lastAt:null, thread:[] }
-  },
-];
-
-let tasks = [
-  { id:'k1', title:'Review Sarah Whitfield business audit — 24h left on 72h window', client:'c1', assigned:'t1', priority:'Urgent', due:'Today', done:false },
-  { id:'k2', title:'Send audit link to Jessica Reyes (never sent)', client:'c2', assigned:'t2', priority:'High', due:'Today', done:false },
-  { id:'k3', title:'Follow up on Emma Delacroix failed payment', client:'c3', assigned:'t1', priority:'Urgent', due:'Today', done:false },
-  { id:'k4', title:'Book Priya Nakamura Power Session confirmation email', client:'c4', assigned:'t2', priority:'Normal', due:'Tomorrow', done:true },
-  { id:'k5', title:'Chase Jessica Reyes overdue monthly check-in', client:'c2', assigned:'t2', priority:'High', due:'Yesterday', done:false },
-];
-
-let activityLog = [
-  { time:'9:41 AM', text:'Emma Delacroix — payment marked Failed', user:'System (demo)' },
-  { time:'Yesterday', text:'Priya Nakamura — Power Session booked', user:'Alex' },
-  { time:'2 days ago', text:'Sarah Whitfield — Business Audit submitted', user:'System (demo)' },
-  { time:'3 days ago', text:'Sarah Whitfield — enrolled in Business Advisory & Support', user:'System (demo)' },
-  { time:'5 days ago', text:'Jessica Reyes — monthly check-in became overdue', user:'System (demo)' },
-];
-
-function logActivity(text, user){
-  activityLog.unshift({ time:'Just now', text, user: user || 'Christine' });
-}
-
-// ---------- DERIVED / ACTION-REQUIRED ITEMS ----------
-function getActionItems(){
-  const items = [];
-  customers.forEach(c=>{
-    if(c.audit.status==='Submitted' && c.audit.deadlineHoursLeft!=null){
-      const urgent = c.audit.deadlineHoursLeft <= 24;
-      items.push({
-        severity: urgent?'red':'amber',
-        title: `${c.name.split(' (')[0]}'s Business Audit was submitted ${c.audit.submittedAt}`,
-        sub: `Personalised Support Plan due — ${c.audit.deadlineHoursLeft}h left on the 72-hour window`,
-        action:'OPEN AUDIT', target:c.id
-      });
-    }
-    if(c.audit.status==='Not Sent'){
-      items.push({ severity:'amber', title:`${c.name.split(' (')[0]} has no Business Audit sent`, sub:'Enrolled but onboarding is stalled', action:'SEND AUDIT', target:c.id });
-    }
-    if(c.powerSession.status==='Needs Booking'){
-      items.push({ severity:'amber', title:`${c.name.split(' (')[0]} has not booked their Power Session`, sub:c.business, action:'BOOK SESSION', target:c.id });
-    }
-    if(c.payment==='Failed'){
-      items.push({ severity:'red', title:`${c.name.split(' (')[0]}'s payment failed`, sub:'Access/payment status needs review', action:'OPEN CUSTOMER', target:c.id });
-    }
-    if(c.checkIn.status==='Overdue'){
-      items.push({ severity:'red', title:`${c.name.split(' (')[0]}'s monthly check-in is overdue`, sub:c.business, action:'OPEN CHECK-IN', target:c.id });
-    }
-  });
-  return items;
-}
-
-function counts(){
-  const items = getActionItems();
-  return {
-    supportPlansDue: customers.filter(c=>c.audit.status==='Submitted').length,
-    checkInsToReview: customers.filter(c=>c.checkIn.status==='Submitted').length,
-    sessionsNeedBooking: customers.filter(c=>c.powerSession.status==='Needs Booking').length,
-    followUpsDue: tasks.filter(t=>!t.done).length,
-    newThisWeek: customers.filter(c=>c.enrolledDaysAgo<=7).length,
-    paymentIssues: customers.filter(c=>c.payment==='Failed').length,
-  };
-}
-
-// ---------- HELPERS ----------
-function el(html){ const d=document.createElement('div'); d.innerHTML=html.trim(); return d.firstChild; }
-function findCustomer(id){ return customers.find(c=>c.id===id); }
-function findTeam(id){ return team.find(t=>t.id===id); }
-function statusBadgeClass(s){
-  if(['Completed','Reviewed','Active','Current','Submitted','Booked'].includes(s)) return 'green';
-  if(['In Progress','Needs Booking','Sent','Started','Under Review'].includes(s)) return 'amber';
-  if(['Overdue','Failed','Payment Issue','Not Sent','Not Started'].includes(s)) return 'red';
-  return 'neutral';
-}
-function go(view, id){ state.route = { view, id: id||null }; state.profileTab='overview'; render(); window.scrollTo(0,0); }
-
-// ---------- NAV ----------
-const NAV = [
-  {key:'dashboard', label:'Dashboard'},
-  {key:'checkins', label:'Monthly Check-Ins', count:()=>customers.filter(c=>c.checkIn.status==='Submitted'||c.checkIn.status==='Overdue').length},
-  {key:'calls', label:'Power Sessions'},
-  {key:'retention', label:'Payment Management', count:()=>customers.filter(c=>c.board==='risk'||c.payment==='Failed').length},
-  {key:'notifications', label:'Notifications', count:()=>getActionItems().length},
-  {key:'communications', label:'Messages', count:()=>customers.filter(c=>c.comms.status==='unread'||c.comms.status==='unanswered').length},
-  {key:'students', label:'Students', count:()=>customers.length},
-  {key:'community', label:'Community'},
-  {key:'library', label:'Library', expandable:true, children:[
-    {key:'lib-programs', label:'Programs'},
-    {key:'lib-levels', label:'Levels'},
-    {key:'lib-resources', label:'Resources'},
-    {key:'lib-classroom', label:'Classroom'},
-    {key:'lib-forms', label:'Forms'},
-    {key:'lib-questionnaires', label:'Questionnaires'},
-  ]},
-  {key:'business', label:'Business', expandable:true, children:[
-    {key:'money', label:'Money'},
-    {key:'renewals', label:'Renewals', count:()=>customers.filter(c=>c.renewalDaysLeft<=30).length},
-    {key:'analytics', label:'Analytics'},
-    {key:'referral-inbox', label:'Referral Inbox'},
-  ]},
-  {key:'academy', label:"Educator's Pathway"},
-  {key:'settings', label:'Settings'},
-  {key:'internal', label:'Internal', expandable:true, children:[
-    {key:'tasks', label:'Tasks', count:()=>tasks.filter(t=>!t.done).length},
-    {key:'activity', label:'Activity Log'},
-    {key:'team', label:'Team', count:()=>team.length},
-  ]},
-];
-
-function navExpanded(key){
-  return state.navExpanded[key] !== false; // default expanded, matches reference screenshot
-}
-
-function renderNav(){
-  const rows = NAV.map(it=>{
-    if(it.expandable){
-      const open = navExpanded(it.key);
-      const childRows = it.children.map(ch=>{
-        const active = state.route.view===ch.key ? 'active':'';
-        const count = ch.count ? ch.count() : null;
-        return `<div class="nav-item nav-child ${active}" data-nav="${ch.key}">${ch.label}${count!=null?`<span class="count">${count}</span>`:''}</div>`;
-      }).join('');
-      return `
-        <div class="nav-item nav-parent" data-navtoggle="${it.key}">${it.label}<span class="nav-caret ${open?'open':''}">⌃</span></div>
-        ${open ? `<div class="nav-children">${childRows}</div>` : ''}
-      `;
-    }
-    const active = state.route.view===it.key ? 'active':'';
-    const count = it.count ? it.count() : null;
-    return `<div class="nav-item ${active}" data-nav="${it.key}">${it.label}${count!=null?`<span class="count">${count}</span>`:''}</div>`;
-  }).join('');
-
-  return `
-  <div id="nav">
-    <div class="nav-brand">
-      <div class="mark serif">BTM <em>Operations</em> HQ</div>
-      <div class="sub">Beauty Training Mastery</div>
-    </div>
-    <div class="nav-search"><input placeholder="Search students, clients, orders…" id="global-search"/></div>
-    <div class="nav-scroll"><div class="nav-group">${rows}</div></div>
-    <div class="nav-foot">
-      <div class="avatar">CL</div>
-      <div>
-        <div class="who">Christine (BTM Advisory)</div>
-        <div class="role">Operations</div>
-      </div>
-    </div>
-  </div>`;
-}
-
-// ---------- DASHBOARD ----------
-function renderDashboard(){
-  const c = counts();
-  const items = getActionItems();
-  const newStudents = customers.filter(x=>x.enrolledDaysAgo<=10).slice(0,4);
-  const critical = items.filter(i=>i.severity==='red');
-  const warn = items.filter(i=>i.severity==='amber');
-  const openTasks = tasks.filter(t=>!t.done).length;
-  const unreadMsgs = customers.filter(c=>c.comms.status==='unread'||c.comms.status==='unanswered').length;
-
-  const chip = (co)=>{
-    const target = findCustomer(co.target);
-    const cls = co.severity==='red' ? 'crit' : 'warn';
-    return `<span class="urgent-chip ${cls}">${target ? target.name.split(' (')[0] : ''}${co.days!=null?`, ${co.days}d`:''}</span>`;
-  };
-
-  const boardCols = { 'on-track':'green', 'needs':'amber', 'risk':'red' };
-  const boardRows = customers
-    .filter(cu=>cu.board==='needs'||cu.board==='risk')
-    .sort((a,b)=> (a.board==='risk'?0:1) - (b.board==='risk'?0:1));
-
-  return `
-    <div class="dash-header">
-      <div>
-        <h1>Good afternoon, Christine</h1>
-        <div class="meta">Friday 4 September · ${customers.length} active students &amp; clients</div>
-      </div>
-      <div class="quick-actions">
-        <button class="qa-btn primary" data-toast="Add Student form is Phase 1 backend — wiring next.">Add Student</button>
-        <button class="qa-btn" data-toast="Program builder is Phase 4 (Programs &amp; Courses).">New Program</button>
-        <button class="qa-btn" data-toast="Nutrition isn't a BTM workflow — carried over from Coach Vault reference, can remove.">Nutrition Plan</button>
-        <button class="qa-btn" data-nav="communications">Messages · ${unreadMsgs}</button>
-      </div>
-    </div>
-
-    <div class="demo-banner">⚠ Running on demo/test data only — Sarah, Jessica, Emma, Priya and Maya are not real BTM students. No live Shopify, Stripe or calendar data is connected yet.</div>
-
-    <div class="pill-row">
-      <div class="pill red" data-nav="students" data-filter="needs-attention"><span class="pill-num">${critical.length+warn.length}</span><span class="pill-label">retention cards</span><span class="pill-arrow">›</span></div>
-      <div class="pill ${c.checkInsToReview?'amber':'neutral'}" data-nav="students" data-filter="checkin-due"><span class="pill-num">${c.checkInsToReview}</span><span class="pill-label">documents to review</span><span class="pill-arrow">›</span></div>
-      <div class="pill ${critical.length?'red':'neutral'}" data-nav="students" data-filter="payment-issue"><span class="pill-num">${critical.length}</span><span class="pill-label">needs action</span><span class="pill-arrow">›</span></div>
-      <div class="pill neutral" data-nav="students" data-filter="new"><span class="pill-num">${c.newThisWeek}</span><span class="pill-label">new this week</span><span class="pill-arrow">›</span></div>
-      <div class="pill ${unreadMsgs?'red':'neutral'}" data-nav="communications"><span class="pill-num">${unreadMsgs}</span><span class="pill-label">unread message${unreadMsgs===1?'':'s'}</span><span class="pill-arrow">›</span></div>
-    </div>
-
-    ${items.length ? `
-    <div class="urgent-banner">
-      <div class="urgent-icon">!</div>
-      <div class="urgent-body">
-        <div class="urgent-title">${critical.length} client${critical.length===1?'':'s'} need urgent follow-up. Plus ${warn.length} needing attention soon.</div>
-        <div class="urgent-chips">
-          ${items.slice(0,3).map(chip).join('')}
-          ${items.length>3?`<span class="urgent-chip">+${items.length-3} more</span>`:''}
-        </div>
-      </div>
-      <button class="btn primary small" data-nav="students" data-filter="needs-attention">Open inbox</button>
-    </div>` : ''}
-
-    <div class="collapsible">
-      <div class="collapsible-head" data-toggle="checkins">
-        <span class="chevron ${state.collapsed.checkins?'':'open'}">›</span>
-        <span class="collapsible-title">Documents to Review</span>
-        <span class="collapsible-count ${c.checkInsToReview?'hot':''}">${c.checkInsToReview}</span>
-      </div>
-      ${!state.collapsed.checkins ? `<div class="collapsible-body">
-        ${c.checkInsToReview ? customers.filter(cu=>cu.checkIn.status==='Submitted').map(cu=>`
-          <div class="na-row">
-            <div class="init-avatar">${initials(cu.name)}</div>
-            <div style="flex:1"><div class="na-name">${cu.name.split(' (')[0]}</div><div class="na-reason" style="color:var(--text-dim)">Submitted a document for review</div></div>
-            <div class="na-actions"><button class="btn small" data-nav="students" data-id="${cu.id}">Open</button></div>
-          </div>`).join('') : `<div class="empty-state">No check-ins waiting on you.</div>`}
-      </div>` : ''}
-    </div>
-
-    <div class="collapsible">
-      <div class="collapsible-head" data-toggle="needsaction">
-        <span class="chevron ${state.collapsed.needsaction?'':'open'}">›</span>
-        <span class="collapsible-title">Needs Action</span>
-        <span class="collapsible-count ${items.length?'hot':''}">${items.length}</span>
-        <span class="collapsible-hint">Worst first</span>
-      </div>
-      ${!state.collapsed.needsaction ? `<div class="collapsible-body">
-        ${items.length ? items.map(it=>`
-          <div class="na-row">
-            <div class="init-avatar">${initials(findCustomer(it.target)?.name||'?')}</div>
-            <div style="flex:1"><div class="na-name">${it.title}</div><div class="na-reason">${it.sub}</div></div>
-            <div class="na-actions">
-              <button class="btn small" data-toast="Cleared from the Needs Action list.">Clear</button>
-              <button class="btn primary small" data-nav="students" data-id="${it.target}">Open</button>
-            </div>
-          </div>`).join('') : `<div class="empty-state">You're all caught up.</div>`}
-      </div>` : ''}
-    </div>
-
-    <div class="collapsible">
-      <div class="collapsible-head" data-toggle="newstudents">
-        <span class="chevron ${state.collapsed.newstudents?'':'open'}">›</span>
-        <span class="collapsible-title">New Students · First 7 Days</span>
-        <span class="collapsible-count">${newStudents.length}</span>
-        <span class="collapsible-hint">Stuck first</span>
-      </div>
-      ${!state.collapsed.newstudents ? `<div class="collapsible-body">
-        ${newStudents.length ? newStudents.map(s=>`
-          <div class="na-row">
-            <div class="init-avatar">${initials(s.name)}</div>
-            <div style="flex:1">
-              <div class="na-name">${s.name.split(' (')[0]}</div>
-              <div class="na-reason" style="color:var(--text-dim)">
-                Purchase ${s.onboarding.purchase?'✓':'✕'} · Access ${s.onboarding.access?'✓':'✕'} · Onboarding ${s.onboarding.onboarding?'✓':'✕'} · Audit ${s.onboarding.audit==='ok'?'✓':s.onboarding.audit==='pending'?'⏳':'✕'}
-              </div>
-            </div>
-            <button class="btn small" data-nav="students" data-id="${s.id}">Open</button>
-          </div>`).join('') : `<div class="empty-state">No students in their first 7 days.</div>`}
-      </div>` : ''}
-    </div>
-
-    <div class="collapsible">
-      <div class="collapsible-head" data-toggle="board">
-        <span class="chevron ${state.collapsed.board?'':'open'}">›</span>
-        <span class="collapsible-title">Student Board</span>
-        <span class="collapsible-count ${boardRows.length?'hot':''}">${boardRows.length}</span>
-        <span class="collapsible-hint">Needs Attention + At Risk shown · Open full board ›</span>
-      </div>
-      ${!state.collapsed.board ? `<div class="collapsible-body">
-        ${boardRows.length ? boardRows.map(cu=>{
-          const flagCount = (cu.payment==='Failed'?1:0) + (cu.checkIn.status==='Overdue'?1:0) + (cu.audit.status==='Not Sent'?1:0) + (cu.powerSession.status==='Needs Booking'?1:0);
-          return `
-          <div class="board-row" data-nav="students" data-id="${cu.id}">
-            <div class="init-avatar">${initials(cu.name)}</div>
-            <div class="name">${cu.name.split(' (')[0]}</div>
-            <div class="flag-dots">${[0,1,2].map(i=>`<span class="${i<flagCount?'on':''}"></span>`).join('')}</div>
-            <div class="board-num">${flagCount}</div>
-            <div class="board-last">${cu.lastActivity}</div>
-          </div>`;
-        }).join('') : `<div class="empty-state">Nobody needs attention right now.</div>`}
-        <div class="board-foot" data-nav="students" data-filter="needs-attention">Open the full student board (${boardRows.length}) →</div>
-      </div>` : ''}
-    </div>
-
-    <div class="collapsible">
-      <div class="collapsible-head" data-toggle="team">
-        <span class="chevron ${state.collapsed.team?'':'open'}">›</span>
-        <span class="collapsible-title">Team</span>
-      </div>
-      ${!state.collapsed.team ? `<div class="collapsible-body">
-        <div class="team-bar-wrap">
-          <div class="team-bar-head">
-            <span class="role-tag">HEAD COACH</span>
-            <span style="font-size:12px;color:var(--text-dim)">${team.length} coaches · ${customers.length} clients</span>
-            <span class="attn-tag">${boardRows.length} need attention</span>
-          </div>
-          <div class="team-bar">
-            <div class="seg green" style="flex:${customers.filter(c=>c.board==='on-track').length||0.01}"></div>
-            <div class="seg amber" style="flex:${customers.filter(c=>c.board==='needs').length||0.01}"></div>
-            <div class="seg red" style="flex:${customers.filter(c=>c.board==='risk').length||0.01}"></div>
-          </div>
-        </div>
-        ${team.map(t=>`
-          <div class="board-row" data-nav="team">
-            <div class="init-avatar">${initials(t.name)}</div>
-            <div class="name">${t.name} <span style="color:var(--text-faint);font-weight:400">— ${t.role}</span></div>
-            <div style="font-size:12px;color:var(--text-dim)">${customers.filter(c=>c.assigned===t.id).length} clients</div>
-            <div class="board-last">${tasks.filter(k=>k.assigned===t.id&&!k.done).length} open</div>
-          </div>`).join('')}
-      </div>` : ''}
-    </div>
-  `;
-}
-
-function initials(name){
-  return name.split(' (')[0].split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
-}
-
-
-// ---------- STUDENTS LIST ----------
-function renderStudents(){
-  let list = customers.slice();
-  const f = state.studentFilter;
-  if(f==='needs-attention') list = list.filter(c=>c.board==='needs'||c.board==='risk');
-  if(f==='new') list = list.filter(c=>c.enrolledDaysAgo<=7);
-  if(f==='payment-issue') list = list.filter(c=>c.payment==='Failed');
-  if(f==='audit-pending') list = list.filter(c=>c.audit.status==='Submitted'||c.audit.status==='Not Sent');
-  if(f==='checkin-due') list = list.filter(c=>c.checkIn.status==='Overdue'||c.checkIn.status==='Submitted');
-  if(f==='session-pending') list = list.filter(c=>c.powerSession.status==='Needs Booking');
-  if(f==='level1') list = list.filter(c=>c.level==='Level 1');
-  if(f==='level2') list = list.filter(c=>c.level==='Level 2');
-  if(f==='educator-pathway') list = list.filter(c=>c.educatorPathway);
-  if(state.studentSearch){
-    const q = state.studentSearch.toLowerCase();
-    list = list.filter(c=> c.name.toLowerCase().includes(q) || c.business.toLowerCase().includes(q));
-  }
-
-  const chips = [
-    {k:'all', l:'All'}, {k:'needs-attention', l:'Needs Attention'}, {k:'new', l:'New This Week'},
-    {k:'level1', l:'Level 1'}, {k:'level2', l:'Level 2'}, {k:'educator-pathway', l:"Educator's Pathway"},
-    {k:'payment-issue', l:'Payment Issue'},
-    {k:'audit-pending', l:'Audit Pending'}, {k:'checkin-due', l:'Check-in Due'}, {k:'session-pending', l:'Power Session Pending'},
-  ];
-
-  return `
-    <div class="topline"><div><h1>Students</h1><div class="meta">${list.length} shown · ${customers.length} total</div></div></div>
-    <div class="filter-row">
-      ${chips.map(c=>`<div class="chip ${state.studentFilter===c.k?'active':''}" data-studentfilter="${c.k}">${c.l}</div>`).join('')}
-      <input class="search-box" placeholder="Search name or business…" id="student-search" value="${state.studentSearch}"/>
-    </div>
-    <table>
-      <thead><tr>
-        <th>Student</th><th>Business</th><th>Program</th><th>Level</th><th>Payment</th><th>Audit</th><th>Check-in</th><th>Power Session</th><th>Last activity</th><th>Status</th>
-      </tr></thead>
-      <tbody>
-        ${list.map(c=>`
-          <tr data-nav="students" data-id="${c.id}">
-            <td>${c.name.split(' (')[0]}${c.educatorPathway?` <span class="badge neutral" style="font-size:10px;">Educator's Pathway</span>`:''}</td>
-            <td>${c.business}</td>
-            <td>${c.program}</td>
-            <td><span class="badge ${c.level==='Level 2'?'amber':'neutral'}">${c.level}</span></td>
-            <td><span class="badge ${statusBadgeClass(c.payment)}">${c.payment}</span></td>
-            <td><span class="badge ${statusBadgeClass(c.audit.status)}">${c.audit.status}</span></td>
-            <td><span class="badge ${statusBadgeClass(c.checkIn.status)}">${c.checkIn.status}</span></td>
-            <td><span class="badge ${statusBadgeClass(c.powerSession.status)}">${c.powerSession.status}</span></td>
-            <td>${c.lastActivity}</td>
-            <td><span class="badge ${statusBadgeClass(c.status)}">${c.status}</span></td>
-          </tr>`).join('') || `<tr><td colspan="10"><div class="empty-state">No records match this filter.</div></td></tr>`}
-      </tbody>
-    </table>
-  `;
-}
-
-// ---------- PROFILE ----------
-function renderProfile(id){
-  const c = findCustomer(id);
-  if(!c) return `<div class="empty-state">Record not found.</div>`;
-  const nextAction = getNextAction(c);
-  const tabs = ['overview','audit','support-plan','check-ins','power-sessions','notes'];
-  const tabLabels = {overview:'Overview', audit:'Business Audit', 'support-plan':'Support Plan', 'check-ins':'Check-Ins', 'power-sessions':'Power Sessions', notes:'Notes'};
-
-  return `
-    <div class="breadcrumb"><span data-nav="students">Students</span> / ${c.name.split(' (')[0]}</div>
-    <div class="profile-head">
-      <div>
-        <h2 class="p-name">${c.name.split(' (')[0]} <span style="font-size:12px;color:var(--text-faint);font-family:'Inter'">(demo record)</span></h2>
-        <div class="p-biz">${c.business}</div>
-        <div class="p-contact">${c.email} · ${c.phone}</div>
-        <div class="profile-meta">
-          <div class="m"><span class="k">Program</span>${c.program}</div>
-          <div class="m"><span class="k">Level</span>${c.level}${c.level==='Level 1'?' ($199/wk)':' ($199/wk + $99/wk add-on)'}</div>
-          <div class="m"><span class="k">Assigned to</span>${findTeam(c.assigned).name}</div>
-          <div class="m"><span class="k">Last active</span>${c.lastActivity}</div>
-          <div class="m"><span class="k">Status</span><span class="badge ${statusBadgeClass(c.status)}">${c.status}</span></div>
-        </div>
-      </div>
-      <div class="profile-actions">
-        <button class="btn" data-note-focus="1">Add Note</button>
-        <button class="btn" data-toast="Goal-setting UI is Phase 2 (Support Plans).">Set Goal</button>
-        <button class="btn" data-toast="Power Session booking needs Google Calendar credentials — not connected yet.">Book Power Session</button>
-        <button class="btn" data-nav="communications" data-commsjump="${c.id}">Send Message</button>
-        <button class="btn ghost" data-toast="Student platform URL/API not yet provided by BTM — connect in Phase 4.">View Student Experience</button>
-      </div>
-    </div>
-
-    ${nextAction.text ? `
-    <div class="next-action ${nextAction.severity}">
-      <div><div class="na-label">Your next action</div><div class="na-text">${nextAction.text}</div></div>
-      <button class="btn primary small" data-tabjump="${nextAction.tab}">${nextAction.cta}</button>
-    </div>` : ''}
-
-    <div class="tabs">
-      ${tabs.map(t=>`<div class="tab ${state.profileTab===t?'active':''}" data-tab="${t}">${tabLabels[t]}</div>`).join('')}
-    </div>
-
-    <div id="tab-content">${renderProfileTab(c)}</div>
-  `;
-}
-
-function getNextAction(c){
-  if(c.payment==='Failed') return { severity:'', text:`Payment failed — access/payment status needs review before continuing advisory work.`, cta:'REVIEW PAYMENT', tab:'overview' };
-  if(c.audit.status==='Submitted') return { severity:'', text:`Business audit submitted ${c.audit.submittedAt}. Support plan due in ${c.audit.deadlineHoursLeft}h.`, cta:'OPEN AUDIT', tab:'audit' };
-  if(c.audit.status==='Not Sent') return { severity:'amber', text:`No business audit has been sent yet.`, cta:'SEND AUDIT', tab:'audit' };
-  if(c.checkIn.status==='Overdue') return { severity:'', text:`Monthly check-in is overdue.`, cta:'FOLLOW UP', tab:'check-ins' };
-  if(c.powerSession.status==='Needs Booking') return { severity:'amber', text:`Power Session has not been booked.`, cta:'BOOK SESSION', tab:'power-sessions' };
-  return { severity:'green', text:`No outstanding action — this record is on track.`, cta:'', tab:'overview' };
-}
-
-function renderProfileTab(c){
-  const t = state.profileTab;
-  if(t==='overview'){
-    return `
-      <div class="card">
-        <h3>Journey Status</h3>
-        <div class="kv">
-          <div class="item"><div class="k">Enrolment</div><div class="v">${c.enrolledDaysAgo} days ago</div></div>
-          <div class="item"><div class="k">Payment status</div><div class="v"><span class="badge ${statusBadgeClass(c.payment)}">${c.payment}</span></div></div>
-          <div class="item"><div class="k">Business audit</div><div class="v"><span class="badge ${statusBadgeClass(c.audit.status)}">${c.audit.status}</span></div></div>
-          <div class="item"><div class="k">Support plan</div><div class="v"><span class="badge ${statusBadgeClass(c.supportPlan.status)}">${c.supportPlan.status}</span></div></div>
-          <div class="item"><div class="k">Monthly check-in</div><div class="v"><span class="badge ${statusBadgeClass(c.checkIn.status)}">${c.checkIn.status}</span></div></div>
-          <div class="item"><div class="k">Power Session</div><div class="v"><span class="badge ${statusBadgeClass(c.powerSession.status)}">${c.powerSession.status}</span></div></div>
-        </div>
-      </div>
-      <div class="card">
-        <h3>Recent Activity</h3>
-        ${activityLog.filter(a=>a.text.includes(c.name.split(' (')[0])).slice(0,5).map(a=>`
-          <div class="log-row"><div class="log-time">${a.time}</div><div>${a.text}</div></div>
-        `).join('') || '<div class="empty-state">No logged activity for this record yet.</div>'}
-      </div>
-    `;
-  }
-  if(t==='audit'){
-    return `
-      <div class="card">
-        <h3>Business Audit</h3>
-        <div class="kv">
-          <div class="item"><div class="k">Status</div><div class="v"><span class="badge ${statusBadgeClass(c.audit.status)}">${c.audit.status}</span></div></div>
-          <div class="item"><div class="k">Submitted</div><div class="v">${c.audit.submittedAt || '—'}</div></div>
-          <div class="item"><div class="k">72-hour window</div><div class="v">${c.audit.deadlineHoursLeft!=null ? c.audit.deadlineHoursLeft+'h remaining' : '—'}</div></div>
-          <div class="item"><div class="k">Reviewer</div><div class="v">${findTeam(c.assigned).name}</div></div>
-        </div>
-      </div>
-      <div class="placeholder-block">
-        <div class="pt">Full audit responses aren't wired up yet</div>
-        <div class="ps">This will display the actual submitted audit form once the audit intake (currently on the Shopify storefront / a form tool) is confirmed and connected. Phase 2 build.</div>
-      </div>
-    `;
-  }
-  if(t==='support-plan'){
-    return `
-      <div class="card">
-        <h3>Goals</h3>
-        ${c.supportPlan.goals.length ? c.supportPlan.goals.map(g=>`
-          <div class="task-row">
-            <div class="task-title">${g.goal} <span style="color:var(--text-faint)">— target ${g.target}</span></div>
-            <span class="priority-tag ${g.priority}">${g.priority}</span>
-            <span class="badge ${statusBadgeClass(g.status)}">${g.status}</span>
-          </div>`).join('') : `<div class="empty-state">No goals set yet.</div>`}
-      </div>
-      <div class="placeholder-block">
-        <div class="pt">Action-item tracking is Phase 2</div>
-        <div class="ps">Owners, due dates and completion tracking for individual action items build on top of this goals view.</div>
-      </div>
-    `;
-  }
-  if(t==='check-ins'){
-    return `<div class="card"><h3>Monthly Check-In</h3>
-      <div class="kv"><div class="item"><div class="k">Status</div><div class="v"><span class="badge ${statusBadgeClass(c.checkIn.status)}">${c.checkIn.status}</span></div></div></div>
-      </div>
-      <div class="placeholder-block"><div class="pt">Check-in submission history is Phase 2</div><div class="ps">Full check-in form responses, priority flags, and follow-up tracking build here once the check-in intake is connected.</div></div>`;
-  }
-  if(t==='power-sessions'){
-    return `<div class="card"><h3>Power Sessions</h3>
-      <div class="kv"><div class="item"><div class="k">Status</div><div class="v"><span class="badge ${statusBadgeClass(c.powerSession.status)}">${c.powerSession.status}</span></div></div></div>
-      </div>
-      <div class="placeholder-block"><div class="pt">Calendar &amp; booking is Phase 2</div><div class="ps">Booking, rescheduling and meeting links require Google Calendar credentials, which BTM hasn't provided yet.</div></div>`;
-  }
-  if(t==='notes'){
-    return `
-      <div class="card">
-        <h3>Notes</h3>
-        <div id="notes-list">
-          ${c.notes.length ? c.notes.map(n=>`<div class="note">${n.text}<div class="note-meta">${n.author} · ${n.when}</div></div>`).join('') : `<div class="empty-state">No notes yet.</div>`}
-        </div>
-        <div class="note-input">
-          <textarea id="new-note" placeholder="Add a note about ${c.name.split(' (')[0]}…"></textarea>
-          <button class="btn primary" id="save-note">Save</button>
-        </div>
-      </div>
-    `;
-  }
-  return '';
-}
-
-// ---------- RENEWALS ----------
-function renewalState(days){
-  if(days==null) return { key:'missing', label:'Missing Date', cls:'neutral' };
-  if(days<0) return { key:'overdue', label:'Overdue', cls:'red' };
-  if(days<=7) return { key:'critical', label:'Critical', cls:'red' };
-  if(days<=30) return { key:'next30', label:'Next 30 Days', cls:'amber' };
-  if(days<=60) return { key:'next60', label:'Next 60 Days', cls:'amber' };
-  if(days<=90) return { key:'next90', label:'Next 90 Days', cls:'neutral' };
-  return { key:'continuity', label:'Continuity', cls:'green' };
-}
-
-function renderRenewals(){
-  let list = customers.slice().sort((a,b)=> (a.renewalDaysLeft??999) - (b.renewalDaysLeft??999));
-  const f = state.renewalFilter || 'all';
-  if(f!=='all') list = list.filter(c=> renewalState(c.renewalDaysLeft).key===f);
-
-  const chips = [
-    {k:'all', l:'All'}, {k:'missing', l:'Missing Date'}, {k:'overdue', l:'Overdue'},
-    {k:'critical', l:'Critical'}, {k:'next30', l:'Next 30 Days'}, {k:'next60', l:'Next 60 Days'},
-    {k:'next90', l:'Next 90 Days'}, {k:'continuity', l:'Continuity'},
-  ];
-  const upsellTargets = customers.filter(c=>c.level==='Level 1' && c.renewalDaysLeft<=30);
-
-  return `
-    <div class="topline"><div><h1>Renewals</h1><div class="meta">Sorted by days remaining · reach out before the renewal date, not after</div></div></div>
-
-    <div class="demo-banner">⚠ Renewal dates below are demo values. Real renewal dates need to sync from Stripe subscription data once BTM's Stripe credentials are connected.</div>
-
-    ${upsellTargets.length ? `
-    <div class="urgent-banner" style="background:var(--amber-dim);border-color:#e8d5a8;">
-      <div class="urgent-icon" style="background:var(--amber);">↑</div>
-      <div class="urgent-body">
-        <div class="urgent-title">${upsellTargets.length} Level 1 student${upsellTargets.length===1?'':'s'} renewing within 30 days — good moment to pitch Scale Society (+$99/wk on top of their existing $199/wk).</div>
-        <div class="urgent-chips">${upsellTargets.map(c=>`<span class="urgent-chip warn">${c.name.split(' (')[0]}, ${c.renewalDaysLeft}d</span>`).join('')}</div>
-      </div>
-    </div>` : ''}
-
-    <div class="filter-row">
-      ${chips.map(c=>`<div class="chip ${f===c.k?'active':''}" data-renewalfilter="${c.k}">${c.l}</div>`).join('')}
-    </div>
-
-    <table>
-      <thead><tr>
-        <th>Customer</th><th>Program</th><th>Level</th><th>Payment</th><th>Assigned</th><th>Renewal</th><th>Status</th>
-      </tr></thead>
-      <tbody>
-        ${list.map(c=>{
-          const rs = renewalState(c.renewalDaysLeft);
-          return `
-          <tr data-nav="students" data-id="${c.id}">
-            <td>${c.name.split(' (')[0]}</td>
-            <td>${c.program}</td>
-            <td>${c.level}${c.level==='Level 1'?` <span style="color:var(--gold);font-size:11px;">· upsell target</span>`:''}</td>
-            <td><span class="badge ${statusBadgeClass(c.payment)}">${c.payment}</span></td>
-            <td>${findTeam(c.assigned).name}</td>
-            <td>${c.renewalDaysLeft==null?'—':c.renewalDaysLeft<0?`${Math.abs(c.renewalDaysLeft)}d overdue`:`${c.renewalDaysLeft}d left`}</td>
-            <td><span class="badge ${rs.cls}">${rs.label}</span></td>
-          </tr>`;
-        }).join('') || `<tr><td colspan="7"><div class="empty-state">No records match this filter.</div></td></tr>`}
-      </tbody>
-    </table>
-  `;
-}
-
-// ---------- GENERIC PLACEHOLDER PAGE ----------
-function renderPlaceholderPage(title, note, phase){
-  return `
-    <div class="topline"><div><h1>${title}</h1><div class="meta">${phase||''}</div></div></div>
-    <div class="placeholder-block">
-      <div class="pt">${title} isn't built out yet</div>
-      <div class="ps">${note}</div>
-    </div>
-  `;
-}
-
-// ---------- CHECK-INS ----------
-function renderCheckins(){
-  const list = customers.slice().sort((a,b)=>{
-    const w = s => s==='Overdue'?0:s==='Submitted'?1:2;
-    return w(a.checkIn.status)-w(b.checkIn.status);
-  });
-  return `
-    <div class="topline"><div><h1>Monthly Check-Ins</h1><div class="meta">Documents students submit each month — review here and get back to them</div></div></div>
-    <table>
-      <thead><tr><th>Student</th><th>Program</th><th>Level</th><th>Assigned</th><th>Document Status</th><th></th></tr></thead>
-      <tbody>
-        ${list.map(c=>`
-          <tr data-nav="students" data-id="${c.id}">
-            <td>${c.name.split(' (')[0]}</td>
-            <td>${c.program}</td>
-            <td><span class="badge ${c.level==='Level 2'?'amber':'neutral'}">${c.level}</span></td>
-            <td>${findTeam(c.assigned).name}</td>
-            <td><span class="badge ${statusBadgeClass(c.checkIn.status)}">${c.checkIn.status}</span></td>
-            <td>${c.checkIn.status!=='Not Due'?`<button class="btn small" data-nav="students" data-id="${c.id}">Review</button>`:''}</td>
-          </tr>`).join('')}
-      </tbody>
-    </table>
-    <div class="placeholder-block" style="margin-top:16px;">
-      <div class="pt">Full document submissions are Phase 2</div>
-      <div class="ps">This shows status only. The actual submitted document — business details, monthly progress, whatever the student filled out — and priority-flag logic (e.g. student explicitly asks for help, reports a business issue) build here once the intake form is connected.</div>
-    </div>
-  `;
-}
-
-// ---------- RETENTION ----------
-function renderRetention(){
-  const atRisk = customers.filter(c=>c.board==='risk');
-  const paymentIssues = customers.filter(c=>c.payment==='Failed');
-  const f = state.retentionTab || 'at-risk';
-  const tabs = [
-    {k:'at-risk', l:'At Risk', count:atRisk.length},
-    {k:'payment', l:'Payment Issues', count:paymentIssues.length},
-    {k:'cancellation', l:'Cancellation Requests', count:0},
-    {k:'winback', l:'Win Back', count:0},
-  ];
-  let rows = [];
-  if(f==='at-risk') rows = atRisk;
-  if(f==='payment') rows = paymentIssues;
-
-  return `
-    <div class="topline"><div><h1>Payment Management</h1><div class="meta">Payment issues, at-risk students, cancellations and win-back — kept separate so nobody gets auto-cancelled or auto-messaged</div></div></div>
-    <div class="filter-row">
-      ${tabs.map(t=>`<div class="chip ${f===t.k?'active':''}" data-retentiontab="${t.k}">${t.l}<span style="margin-left:6px;color:var(--text-faint)">${t.count}</span></div>`).join('')}
-    </div>
-    ${(f==='at-risk'||f==='payment') ? `
-    <table>
-      <thead><tr><th>Student</th><th>Program</th><th>Assigned</th><th>Signal</th><th></th></tr></thead>
-      <tbody>
-        ${rows.map(c=>`
-          <tr data-nav="students" data-id="${c.id}">
-            <td>${c.name.split(' (')[0]}</td>
-            <td>${c.program}</td>
-            <td>${findTeam(c.assigned).name}</td>
-            <td>${f==='payment'?`<span class="badge red">Payment Failed</span>`:`<span class="badge amber">Multiple overdue actions</span>`}</td>
-            <td><button class="btn small" data-nav="students" data-id="${c.id}">Open</button></td>
-          </tr>`).join('') || `<tr><td colspan="5"><div class="empty-state">Nobody in this category right now.</div></td></tr>`}
-      </tbody>
-    </table>` : `
-    <div class="empty-state">No ${f==='cancellation'?'cancellation requests':'win-back candidates'} yet — nothing in the demo data models this category. This needs a real signal once students can request cancellation in-portal or lapse past their renewal date.</div>
-    `}
-  `;
-}
-
-// ---------- NOTIFICATIONS ----------
-function renderNotifications(){
-  const items = getActionItems();
-  return `
-    <div class="topline"><div><h1>Notifications</h1><div class="meta">Everything that needs a look, in one feed</div></div></div>
-    <div class="card">
-      ${items.length ? items.map(it=>`
-        <div class="na-row">
-          <div class="init-avatar">${initials(findCustomer(it.target)?.name||'?')}</div>
-          <div style="flex:1"><div class="na-name">${it.title}</div><div class="na-reason">${it.sub}</div></div>
-          <button class="btn small" data-nav="students" data-id="${it.target}">Open</button>
-        </div>`).join('') : `<div class="empty-state">Nothing to notify you about.</div>`}
-    </div>
-    <div class="placeholder-block">
-      <div class="pt">Push/email notifications are Phase 5</div>
-      <div class="ps">This feed is generated live from student status. Actually notifying staff (email, Slack, push) needs a notification-delivery integration, not yet connected.</div>
-    </div>
-  `;
-}
-
-// ---------- CALLS ----------
-function renderCalls(){
-  const list = customers.slice();
-  return `
-    <div class="topline"><div><h1>Power Sessions</h1><div class="meta">Monthly power session calls — who's booked, who still needs to</div></div></div>
-    <table>
-      <thead><tr><th>Student</th><th>Coach / Advisor</th><th>Status</th><th></th></tr></thead>
-      <tbody>
-        ${list.map(c=>`
-          <tr data-nav="students" data-id="${c.id}">
-            <td>${c.name.split(' (')[0]}</td>
-            <td>${findTeam(c.assigned).name}</td>
-            <td><span class="badge ${statusBadgeClass(c.powerSession.status)}">${c.powerSession.status}</span></td>
-            <td>${c.powerSession.status==='Needs Booking'?`<button class="btn small" data-toast="Booking needs Google Calendar credentials — not connected yet.">Book</button>`:''}</td>
-          </tr>`).join('')}
-      </tbody>
-    </table>
-    <div class="placeholder-block" style="margin-top:16px;">
-      <div class="pt">Calendar view is Phase 2</div>
-      <div class="ps">Week/day calendar, availability, meeting links and reschedules need Google Calendar (or whichever calendar BTM confirms) connected — not yet provided.</div>
-    </div>
-  `;
-}
-
-function commsSortWeight(c){
-  if(c.unread_for_admin) return 0;
-  if(c.status==='pending') return 1;
-  return 2;
-}
-
-let liveComms = {
-  loaded:false,
-  loading:false,
-  authenticated:false,
-  email:null,
-  error:null,
-  conversations:[],
-  open:null,
-  openMessages:[]
-};
-
-function esc(value){
-  return String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
-}
-
-function formatCommsTime(value){
-  if(!value) return '';
-  const d = new Date(value);
-  if(Number.isNaN(d.getTime())) return esc(value);
-  return d.toLocaleString([], {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
-}
-
-async function commsRequest(url, options={}){
-  const response = await fetch(url, {credentials:'same-origin', ...options, headers:{'Content-Type':'application/json', ...(options.headers||{})}});
-  let data = {};
-  try { data = await response.json(); } catch {}
-  if(!response.ok) throw new Error(data.error || `Request failed (${response.status})`);
-  return data;
-}
-
-async function loadLiveCommunications(){
-  if(liveComms.loading) return;
-  liveComms.loading = true;
-  liveComms.error = null;
+const SUPABASE_URL='https://cheaehziqvdnwiavzwxh.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoZWFlaHppcXZkbndpYXZ6d3hoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3NDM3OTMsImV4cCI6MjEwNDMxOTc5M30.zUFzQ6LqmKG_9bheFWykHd1EyL6BehQKeW4gvCaX2bA';
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+let state={route:{view:'dashboard',id:null},studentFilter:'all',studentSearch:'',renewalFilter:'all',commsOpenId:null,navExpanded:{library:true,business:true,internal:false},profileTab:'overview',collapsed:{checkins:false,needsaction:false,newstudents:false,board:false,team:false},loading:true,loadError:null};
+let team=[]; let customers=[]; let tasks=[]; let activityLog=[]; let conversations=[]; let paymentEvents=[]; let session=null; let authError=null;
+let shopifyCustomers=null; let shopifyLoading=false; let shopifyLoadError=null; let shopifyFetchedAt=null;
+async function loadShopifyCustomers(){
+  if(shopifyLoading) return;
+  shopifyLoading=true; shopifyLoadError=null; render();
   try{
-    const me = await commsRequest('/api/auth/me');
-    liveComms.authenticated = !!me.authenticated;
-    liveComms.email = me.email || null;
-    if(!liveComms.authenticated){
-      liveComms.loaded = true;
-    } else {
-      const rows = await commsRequest('/api/conversations');
-      liveComms.conversations = Array.isArray(rows) ? rows : [];
-      liveComms.loaded = true;
-      if(liveComms.conversations.length){
-        const wanted = state.commsOpenId && liveComms.conversations.find(c=>c.id===state.commsOpenId);
-        await openLiveConversation((wanted || liveComms.conversations[0]).id, false);
-      }
-    }
-  }catch(e){
-    liveComms.error = e.message || 'Unable to load Communications.';
-    liveComms.loaded = true;
-  }finally{
-    liveComms.loading = false;
-  }
+    const res = await fetch('/api/shopify/customers');
+    const data = await res.json();
+    if(!res.ok) throw new Error((data && (data.error || JSON.stringify(data.detail))) || 'Failed to load');
+    shopifyCustomers = data.customers;
+    shopifyFetchedAt = data.fetchedAt;
+  }catch(e){ shopifyLoadError = e.message || String(e); }
+  shopifyLoading=false; render();
+}
+function renderShopifyCustomers(){
+  if(shopifyCustomers===null && !shopifyLoading && !shopifyLoadError){ loadShopifyCustomers(); }
+  return `<div class="topline"><div><h1>Shopify Customers</h1><div class="meta">Live from the Beauty Training Mastery Admin API — not demo data</div></div></div><div class="conn-banner"><span class="conn-dot" style="background:var(--green);box-shadow:0 0 0 3px var(--green-dim);"></span><div class="conn-text"><b>Connected to:</b> Shopify Admin API (client credentials grant, read-only). ${shopifyFetchedAt?`Last fetched ${relTime(shopifyFetchedAt)}.`:''} <span data-shopifyrefresh style="text-decoration:underline;cursor:pointer;color:var(--gold);">Refresh</span></div></div>${shopifyLoading?`<div class="empty-state">Loading real customers from Shopify…</div>`:''}${shopifyLoadError?`<div class="empty-state" style="border-color:var(--red);color:var(--red);">Couldn't load Shopify data.<br><span style="color:var(--text-faint);font-size:11px;">${shopifyLoadError}</span></div>`:''}${shopifyCustomers && shopifyCustomers.length?`<table><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Orders</th><th>Total Spent</th><th>Status</th><th>Customer since</th></tr></thead><tbody>${shopifyCustomers.map(c=>`<tr><td>${c.name}</td><td>${c.email||'—'}</td><td>${c.phone||'—'}</td><td>${c.ordersCount}</td><td>$${c.totalSpent}</td><td><span class="badge ${c.state==='enabled'?'green':'neutral'}">${c.state}</span></td><td>${new Date(c.createdAt).toLocaleDateString()}</td></tr>`).join('')}</tbody></table>`:''}${shopifyCustomers && shopifyCustomers.length===0?`<div class="empty-state">Connected successfully — Shopify returned zero customers for this store.</div>`:''}<div class="placeholder-block" style="margin-top:16px;"><div class="pt">Not yet linked to Students</div><div class="ps">This proves the live connection works. Matching these real Shopify customers to BTM Advisory/Scale Society students (who's Level 1 vs Level 2, who's an active student vs a wholesale buyer) is a business-logic decision — worth confirming with Bree before auto-populating the Students table from this.</div></div>`;
+}
+function relTime(iso){if(!iso)return'—';const d=new Date(iso);const diffMs=Date.now()-d.getTime();const mins=Math.round(diffMs/60000);if(mins<1)return'Just now';if(mins<60)return `${mins}m ago`;const hrs=Math.round(mins/60);if(hrs<24)return hrs===1?'1 hour ago':`${hrs} hours ago`;const days=Math.round(hrs/24);if(days===1)return'Yesterday';if(days<7)return `${days} days ago`;return d.toLocaleDateString();}
+function daysAgo(iso){if(!iso)return 0;return Math.floor((Date.now()-new Date(iso).getTime())/86400000);}
+function daysUntil(dateStr){if(!dateStr)return null;return Math.ceil((new Date(dateStr).getTime()-Date.now())/86400000);}
+function hoursUntil(iso){if(!iso)return null;return Math.max(0,Math.round((new Date(iso).getTime()-Date.now())/3600000));}
+async function loadAll(){
+  state.loading=true; state.loadError=null; render();
+  try{
+    const [adminsRes,studentsRes,tasksRes,activityRes,convosRes,paymentsRes]=await Promise.all([
+      sb.from('admins').select('*').order('created_at'),
+      sb.from('students').select('*, notes(*), support_plan_goals(*)').order('created_at'),
+      sb.from('tasks').select('*').order('created_at'),
+      sb.from('activity_log').select('*').order('created_at',{ascending:false}).limit(50),
+      sb.from('conversations').select('*, messages(*)').order('updated_at',{ascending:false}),
+      sb.from('payment_events').select('*').order('created_at',{ascending:false}).limit(250),
+    ]);
+    if(adminsRes.error)throw adminsRes.error; if(studentsRes.error)throw studentsRes.error; if(tasksRes.error)throw tasksRes.error; if(activityRes.error)throw activityRes.error; if(convosRes.error)throw convosRes.error; if(paymentsRes.error)throw paymentsRes.error;
+    team=adminsRes.data.map(a=>({id:a.id,name:a.name,role:a.role}));
+    customers=studentsRes.data.map(s=>{
+      const goals=(s.support_plan_goals||[]).map(g=>({goal:g.goal,priority:g.priority,target:g.target,status:g.status}));
+      const notesArr=(s.notes||[]).slice().sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).map(n=>({id:n.id,text:n.body,author:n.author_name,when:relTime(n.created_at)}));
+      return {id:s.id,name:s.name,business:s.business||'—',email:s.email||'—',phone:s.phone||'—',program:s.program,level:s.level,educatorPathway:s.educator_pathway,assigned:s.assigned_to,status:s.status,board:s.board,lastActivity:relTime(s.last_activity_at),enrolledDaysAgo:daysAgo(s.enrolled_at),renewalDaysLeft:daysUntil(s.renewal_date),onboarding:{purchase:true,access:true,onboarding:true,audit:s.audit_status==='Reviewed'?'ok':(s.audit_status==='Submitted'?'pending':'fail')},audit:{status:s.audit_status,submittedAt:s.audit_submitted_at?relTime(s.audit_submitted_at):null,deadlineHoursLeft:s.audit_deadline_at?hoursUntil(s.audit_deadline_at):null},supportPlan:{status:s.support_plan_status,goals},checkIn:{status:s.checkin_status},powerSession:{status:s.power_session_status},payment:s.payment_status,notes:notesArr};
+    });
+    tasks=tasksRes.data.map(t=>({id:t.id,title:t.title,client:t.student_id,assigned:t.assigned_to,priority:t.priority,due:t.due_date?new Date(t.due_date).toLocaleDateString():'—',done:t.done}));
+    activityLog=activityRes.data.map(a=>({time:relTime(a.created_at),text:a.text,user:a.actor_name||'Christine'}));
+    conversations=convosRes.data.map(c=>({id:c.id,studentId:c.student_id,name:c.customer_name,status:c.status,unreadForAdmin:c.unread_for_admin,assigned:c.assigned_to,thread:(c.messages||[]).slice().sort((a,b)=>new Date(a.created_at)-new Date(b.created_at)).map(m=>({from:m.sender_type==='admin'?'team':'student',text:m.body,time:relTime(m.created_at)}))}));
+    paymentEvents=paymentsRes.data||[];
+    state.loading=false;
+  }catch(err){state.loading=false;state.loadError=err.message||String(err);}
   render();
 }
-
-async function openLiveConversation(id, rerender=true){
-  try{
-    const data = await commsRequest(`/api/conversations/${encodeURIComponent(id)}`);
-    liveComms.open = data.conversation;
-    liveComms.openMessages = data.messages || [];
-    state.commsOpenId = id;
-    await commsRequest(`/api/conversations/${encodeURIComponent(id)}`, {method:'PATCH', body:JSON.stringify({unread_for_admin:false})});
-    const row = liveComms.conversations.find(c=>c.id===id);
-    if(row) row.unread_for_admin = false;
-  }catch(e){
-    liveComms.error = e.message || 'Unable to open conversation.';
-  }
-  if(rerender) render();
+async function logActivity(text,user,studentId){activityLog.unshift({time:'Just now',text,user:user||'Christine'});try{await sb.from('activity_log').insert({text,actor_name:user||'Christine',student_id:studentId||null});}catch(e){}}
+function renderLogin(){
+  return `<div style="min-height:100vh;width:100%;display:flex;align-items:center;justify-content:center;background:var(--sidebar-bg);"><div style="width:340px;background:var(--surface);border-radius:var(--radius-l);padding:32px 28px;"><div class="mark serif" style="font-size:20px;color:var(--text);margin-bottom:2px;">BTM <em style="font-style:italic;color:var(--gold);">Operations</em> HQ</div><div style="font-size:12px;color:var(--text-faint);margin-bottom:22px;">Staff sign-in — Beauty Training Mastery</div>${authError?`<div style="background:var(--red-dim);color:var(--red);font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:14px;">${authError}</div>`:''}${state.magicLinkSent?`<div style="background:var(--green-dim);color:var(--green);font-size:13px;padding:12px 14px;border-radius:8px;">Check your email — we sent a sign-in link to <b>${state.magicLinkSentTo}</b>.</div>`:`<input type="email" id="login-email" placeholder="you@beautytrainingmastery.com" style="width:100%;box-sizing:border-box;background:var(--surface-raised);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--text);outline:none;margin-bottom:10px;"/><button class="btn primary" id="login-send" style="width:100%;padding:10px;">Send sign-in link</button><div style="font-size:11px;color:var(--text-faint);margin-top:14px;">Only emails already on the BTM Operations team list can access this dashboard. No password needed — we'll email you a one-time link.</div>`}</div></div>`;
 }
-
-function renderCommsLogin(){
-  return `
-    <div class="topline"><div><h1>Communications</h1><div class="meta">Every student conversation, in one inbox</div></div></div>
-    <div class="comms-login">
-      <h2>Sign in to Messages</h2>
-      <p>This protects the BTM student conversations from public access. Your credentials stay on the server and the session uses an HttpOnly cookie.</p>
-      <div class="field"><label>Email</label><input id="comms-login-email" type="email" autocomplete="username" placeholder="you@btm.com"></div>
-      <div class="field"><label>Password</label><input id="comms-login-password" type="password" autocomplete="current-password" placeholder="Password"></div>
-      <button class="btn primary" id="comms-login-submit">Sign in</button>
-      <div id="comms-login-error" style="margin-top:10px;color:var(--red);font-size:12px;"></div>
-    </div>`;
-}
-
-function renderCommunications(){
-  if(!liveComms.loaded){
-    setTimeout(loadLiveCommunications, 0);
-    return `<div class="topline"><div><h1>Communications</h1><div class="meta">Every student conversation, in one inbox</div></div></div><div class="comms-loading">Connecting to the BTM messaging backend…</div>`;
-  }
-  if(!liveComms.authenticated) return renderCommsLogin();
-  if(liveComms.error && !liveComms.open){
-    return `<div class="topline"><div><h1>Communications</h1><div class="meta">Every student conversation, in one inbox</div></div></div><div class="comms-error"><b>Communications backend unavailable.</b><br>${esc(liveComms.error)}<br><br>Check the Vercel environment variables and Supabase setup, then refresh.</div>`;
-  }
-
-  const list = liveComms.conversations.slice().sort((a,b)=>commsSortWeight(a)-commsSortWeight(b));
-  const open = liveComms.open;
-  return `
-    <div class="topline"><div><h1>Communications</h1><div class="meta">Every student conversation, in one inbox</div></div><div><span class="badge green">Backend connected</span></div></div>
-    <div class="conn-banner">
-      <span class="conn-dot" style="background:var(--green);box-shadow:0 0 0 3px var(--green-dim);"></span>
-      <div class="conn-text"><b>BTM Messaging Backend</b> · ${esc(liveComms.email)}<br><span style="color:var(--text-faint)">Messages in this inbox are stored in the BTM communications database. Shopify Inbox is not being used as the backend.</span></div>
-      <button class="btn small" id="comms-logout">Log out</button>
-    </div>
-    <div class="comms-layout">
-      <div class="comms-list">
-        ${list.map(c=>`
-          <div class="comms-row ${c.id===state.commsOpenId?'active':''}" data-commsopen="${esc(c.id)}">
-            <div class="init-avatar">${esc(initials(c.customer_name || 'BTM'))}</div>
-            <div class="cr-body">
-              <div class="cr-name">${esc(c.customer_name || 'BTM Student')} ${c.unread_for_admin?'<span class="unread-dot"></span>':''}</div>
-              <div class="cr-preview">${esc(c.last_message ? (c.last_message.sender_type==='admin'?'You: ':'') + c.last_message.body : 'No messages yet')}</div>
-            </div>
-            <div class="cr-time">${formatCommsTime(c.updated_at)}</div>
-          </div>`).join('') || `<div class="empty-state">No conversations yet.</div>`}
-      </div>
-      <div class="comms-thread">
-        ${open ? `
-          <div class="comms-thread-head">
-            <div><div class="th-name">${esc(open.customer_name)}</div><div class="th-sub">${esc(open.customer_email || 'No email')} · <span class="badge ${open.status==='closed'?'neutral':open.status==='pending'?'amber':'green'}">${esc(open.status)}</span></div></div>
-          </div>
-          <div class="comms-msgs">
-            ${liveComms.openMessages.length ? liveComms.openMessages.map(m=>`
-              <div class="msg-bubble ${m.sender_type==='admin'?'team':'student'}"><div>${esc(m.body)}</div><div class="msg-time">${esc(m.sender_name)} · ${formatCommsTime(m.created_at)}</div></div>
-            `).join('') : `<div class="empty-state">No messages yet.</div>`}
-          </div>
-          <div class="comms-reply">
-            <input type="text" placeholder="Reply to ${esc(open.customer_name)}…" id="comms-reply-input" autocomplete="off" />
-            <button class="btn primary small" id="comms-reply-send">Send</button>
-          </div>
-        ` : `<div class="empty-state">Select a conversation.</div>`}
-      </div>
-    </div>`;
-}
-
-// ---------- TASKS ----------
-function renderTasks(){
-  const open = tasks.filter(t=>!t.done);
-  const done = tasks.filter(t=>t.done);
-  return `
-    <div class="topline"><div><h1>Tasks</h1><div class="meta">${open.length} open</div></div></div>
-    <div class="card">
-      <h3>Open</h3>
-      ${open.length ? open.map(t=>`
-        <div class="task-row">
-          <div class="task-check" data-task="${t.id}"></div>
-          <div class="task-title">${t.title}<div style="font-size:11px;color:var(--text-faint);margin-top:2px;">Due ${t.due} · ${findTeam(t.assigned).name}${t.client?` · <span data-nav="students" data-id="${t.client}" style="text-decoration:underline;cursor:pointer;">view record</span>`:''}</div></div>
-          <span class="priority-tag ${t.priority}">${t.priority}</span>
-        </div>`).join('') : '<div class="empty-state">Nothing outstanding.</div>'}
-    </div>
-    <div class="card">
-      <h3>Completed</h3>
-      ${done.length ? done.map(t=>`
-        <div class="task-row">
-          <div class="task-check done" data-task="${t.id}"></div>
-          <div class="task-title done">${t.title}</div>
-        </div>`).join('') : '<div class="empty-state">Nothing completed yet.</div>'}
-    </div>
-  `;
-}
-
-// ---------- ACTIVITY LOG ----------
-function renderActivity(){
-  return `
-    <div class="topline"><div><h1>Activity Log</h1><div class="meta">Every logged operational action</div></div></div>
-    <div class="card">
-      ${activityLog.map(a=>`<div class="log-row"><div class="log-time">${a.time}</div><div>${a.text} <span style="color:var(--text-faint)">— ${a.user}</span></div></div>`).join('')}
-    </div>
-  `;
-}
-
-// ---------- TEAM ----------
-function renderTeam(){
-  return `
-    <div class="topline"><div><h1>Team</h1><div class="meta">${team.length} members</div></div></div>
-    <table>
-      <thead><tr><th>Name</th><th>Role</th><th>Assigned clients</th><th>Open tasks</th></tr></thead>
-      <tbody>
-        ${team.map(t=>`<tr><td>${t.name}</td><td>${t.role}</td><td>${customers.filter(c=>c.assigned===t.id).length}</td><td>${tasks.filter(k=>k.assigned===t.id&&!k.done).length}</td></tr>`).join('')}
-      </tbody>
-    </table>
-    <div class="placeholder-block" style="margin-top:16px;">
-      <div class="pt">Role-based permissions are Phase 1 backend work</div>
-      <div class="ps">Owner/Admin, Operations, Coach/Advisor and Content Manager roles need server-side authorization once this moves off a static demo.</div>
-    </div>
-  `;
-}
-
-// ---------- TOAST ----------
-function toast(msg){
-  let t = document.getElementById('toast');
-  if(!t){
-    t = document.createElement('div');
-    t.id='toast';
-    t.style.cssText='position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--surface-raised);border:1px solid var(--border);color:var(--text);padding:10px 18px;border-radius:8px;font-size:13px;z-index:999;box-shadow:0 8px 24px rgba(0,0,0,.4);';
-    document.body.appendChild(t);
-  }
-  t.textContent = msg;
-  t.style.opacity='1';
-  clearTimeout(window.__toastTimer);
-  window.__toastTimer = setTimeout(()=>{ t.style.opacity='0'; }, 2600);
-}
-
-// ---------- MAIN RENDER ----------
-function renderMain(){
-  const v = state.route.view;
-  if(v==='dashboard') return renderDashboard();
-  if(v==='checkins') return renderCheckins();
-  if(v==='retention') return renderRetention();
-  if(v==='notifications') return renderNotifications();
-  if(v==='calls') return renderCalls();
-  if(v==='community') return renderPlaceholderPage('Community', 'Bree confirmed on the Sept 4 call this isn\'t built into the front-end platform yet — Donamae would need to add it there first before it can surface here. Not building the back-end view until the front-end exists.', 'Waiting on Donamae — front-end not built yet');
-  if(v==='lib-programs') return renderPlaceholderPage('Programs', 'Program → Module → Lesson hierarchy from the original spec. Builds once we know whether course content lives here or stays on the existing Skool-style student platform Donamae built.', 'Phase 4');
-  if(v==='lib-levels') return renderPlaceholderPage('Levels', 'Level 1 (Business Advisory & Support, $199/wk) and Level 2 (Scale Society, +$99/wk) content and access rules, managed from here. Confirmed by Bree on the Sept 4 call as its own Library item, separate from Programs.', 'Phase 4');
-  if(v==='lib-resources') return renderPlaceholderPage('Resources', 'PDFs, videos, templates, guides — the Resource Library from the master spec.', 'Phase 4');
-  if(v==='lib-classroom') return renderPlaceholderPage('Classroom', 'Lesson playback / classroom view, mirrored from Coach Vault.', 'Phase 4');
-  if(v==='lib-forms') return renderPlaceholderPage('Forms', 'This is likely where the Business Audit intake form lives once built — Bree described wanting the audit filled out directly in the portal.', 'Phase 2');
-  if(v==='lib-questionnaires') return renderPlaceholderPage('Questionnaires', 'Monthly check-in questionnaire and any other structured intake forms.', 'Phase 2');
-  if(v==='money') return renderPlaceholderPage('Money', 'Revenue, subscriptions, and payment status pulled from Stripe. Needs BTM\'s Stripe credentials — not yet provided. The Payment column on Students and Payment Management → Payment Issues already surface what we can see without it.', 'Phase 3');
-  if(v==='analytics') return renderPlaceholderPage('Analytics', 'Student, advisory, retention and revenue analytics from the master spec. Needs real historical data — building this on demo data would produce fake metrics, which the build rules explicitly rule out.', 'Phase 6');
-  if(v==='referral-inbox') return renderPlaceholderPage('Referral Inbox', 'Wasn\'t in the original BTM spec — carried over from the Coach Vault reference nav. Confirm with Bree what a "referral" means for BTM (student referrals? affiliate signups?) before building.', 'Not yet scoped');
-  if(v==='academy') return renderPlaceholderPage("Educator's Pathway", 'Bree confirmed on the Sept 4 call this should focus on the Educator\'s Pathway offer (one-off $1,200–$1,400) rather than being a generic "Academy." Certificate-on-completion, course-build training, and workshop/event guidance go here once built.', 'Phase 4');
-  if(v==='settings') return renderPlaceholderPage('Settings', 'Role permissions, team member management, and account settings. Team member data already exists — see Team in the Internal section for now.', 'Phase 1 backend');
-  if(v==='students') return state.route.id ? renderProfile(state.route.id) : renderStudents();
-  if(v==='communications') return renderCommunications();
-  if(v==='renewals') return renderRenewals();
-  if(v==='tasks') return renderTasks();
-  if(v==='activity') return renderActivity();
-  if(v==='team') return renderTeam();
-  return renderDashboard();
-}
-
-function render(){
-  document.getElementById('app').innerHTML = `${renderNav()}<div id="main">${renderMain()}</div>`;
-  bindEvents();
-}
-
-function bindEvents(){
-  document.querySelectorAll('[data-nav]').forEach(node=>{
-    node.addEventListener('click', (e)=>{
-      const view = node.getAttribute('data-nav');
-      const id = node.getAttribute('data-id');
-      const filter = node.getAttribute('data-filter');
-      const commsjump = node.getAttribute('data-commsjump');
-      if(view==='students' && !id) state.studentFilter = filterMap(filter);
-      if(commsjump) state.commsOpenId = commsjump;
-      go(view, id);
-    });
-  });
-  document.querySelectorAll('[data-studentfilter]').forEach(node=>{
-    node.addEventListener('click', ()=>{ state.studentFilter = node.getAttribute('data-studentfilter'); render(); });
-  });
-  document.querySelectorAll('[data-renewalfilter]').forEach(node=>{
-    node.addEventListener('click', ()=>{ state.renewalFilter = node.getAttribute('data-renewalfilter'); render(); });
-  });
-  document.querySelectorAll('[data-retentiontab]').forEach(node=>{
-    node.addEventListener('click', ()=>{ state.retentionTab = node.getAttribute('data-retentiontab'); render(); });
-  });
-  document.querySelectorAll('[data-commsopen]').forEach(node=>{
-    node.addEventListener('click', async ()=>{
-      const id = node.getAttribute('data-commsopen');
-      await openLiveConversation(id);
-    });
-  });
-  const commsLogin = document.getElementById('comms-login-submit');
-  if(commsLogin){
-    commsLogin.addEventListener('click', async ()=>{
-      const email = document.getElementById('comms-login-email').value.trim();
-      const password = document.getElementById('comms-login-password').value;
-      const error = document.getElementById('comms-login-error');
-      commsLogin.disabled = true;
-      try{
-        await commsRequest('/api/auth/login', {method:'POST', body:JSON.stringify({email,password})});
-        liveComms = {...liveComms, authenticated:true, loaded:false, loading:false, error:null};
-        render();
-      }catch(e){ error.textContent = e.message || 'Sign-in failed.'; }
-      finally{ commsLogin.disabled = false; }
-    });
-  }
-  const commsLogout = document.getElementById('comms-logout');
-  if(commsLogout){
-    commsLogout.addEventListener('click', async ()=>{
-      await commsRequest('/api/auth/logout', {method:'POST'});
-      liveComms = {loaded:true,loading:false,authenticated:false,email:null,error:null,conversations:[],open:null,openMessages:[]};
-      render();
-    });
-  }
-  const commsSend = document.getElementById('comms-reply-send');
-  if(commsSend){
-    commsSend.addEventListener('click', async ()=>{
-      const input = document.getElementById('comms-reply-input');
-      const text = input?.value.trim();
-      const id = state.commsOpenId;
-      if(!text || !id) return;
-      commsSend.disabled = true;
-      commsSend.textContent = 'Sending…';
-      try{
-        const msg = await commsRequest(`/api/conversations/${encodeURIComponent(id)}/messages`, {method:'POST', body:JSON.stringify({body:text, sender_name:'Christine (You)'})});
-        liveComms.openMessages.push(msg);
-        const row = liveComms.conversations.find(c=>c.id===id);
-        if(row){ row.updated_at = msg.created_at; row.unread_for_admin=false; row.last_message={sender_type:'admin',body:text}; }
-        input.value='';
-        render();
-      }catch(e){ toast(e.message || 'Message failed to send.'); commsSend.disabled=false; commsSend.textContent='Send'; }
-    });
-    const input = document.getElementById('comms-reply-input');
-    if(input) input.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); commsSend.click(); } });
-  }
-  const search = document.getElementById('student-search');
-  if(search){
-    search.addEventListener('input', (e)=>{ state.studentSearch = e.target.value; render(); document.getElementById('student-search').focus(); document.getElementById('student-search').selectionStart = document.getElementById('student-search').value.length; });
-  }
-  document.querySelectorAll('[data-tab]').forEach(node=>{
-    node.addEventListener('click', ()=>{ state.profileTab = node.getAttribute('data-tab'); render(); });
-  });
-  document.querySelectorAll('[data-tabjump]').forEach(node=>{
-    node.addEventListener('click', ()=>{ state.profileTab = node.getAttribute('data-tabjump'); render(); });
-  });
-  document.querySelectorAll('[data-toggle]').forEach(node=>{
-    node.addEventListener('click', (e)=>{
-      e.stopPropagation();
-      const key = node.getAttribute('data-toggle');
-      state.collapsed[key] = !state.collapsed[key];
-      render();
-    });
-  });
-  document.querySelectorAll('[data-navtoggle]').forEach(node=>{
-    node.addEventListener('click', (e)=>{
-      e.stopPropagation();
-      const key = node.getAttribute('data-navtoggle');
-      state.navExpanded[key] = !navExpanded(key);
-      render();
-    });
-  });
-  document.querySelectorAll('[data-toast]').forEach(node=>{
-    node.addEventListener('click', ()=> toast(node.getAttribute('data-toast')) );
-  });
-  document.querySelectorAll('[data-task]').forEach(node=>{
-    node.addEventListener('click', ()=>{
-      const id = node.getAttribute('data-task');
-      const task = tasks.find(t=>t.id===id);
-      task.done = !task.done;
-      logActivity(`Task "${task.title}" marked ${task.done?'complete':'open'}`);
-      render();
-    });
-  });
-  const saveNote = document.getElementById('save-note');
-  if(saveNote){
-    saveNote.addEventListener('click', ()=>{
-      const ta = document.getElementById('new-note');
-      if(ta.value.trim()){
-        const c = findCustomer(state.route.id);
-        c.notes.unshift({ text: ta.value.trim(), author:'Christine', when:'Just now' });
-        logActivity(`Note added to ${c.name.split(' (')[0]}'s profile`);
-        render();
-      }
-    });
-  }
-}
-
-function filterMap(f){
-  if(f==='audit-pending') return 'audit-pending';
-  if(f==='checkin-due') return 'checkin-due';
-  if(f==='session-pending') return 'session-pending';
-  if(f==='payment-issue') return 'payment-issue';
-  if(f==='new') return 'new';
-  return 'all';
-}
-
-render();
+function getActionItems(){const items=[];customers.forEach(c=>{if(c.audit.status==='Submitted'&&c.audit.deadlineHoursLeft!=null){const urgent=c.audit.deadlineHoursLeft<=24;items.push({severity:urgent?'red':'amber',title:`${c.name.split(' (')[0]}'s Business Audit was submitted ${c.audit.submittedAt}`,sub:`Personalised Support Plan due — ${c.audit.deadlineHoursLeft}h left on the 72-hour window`,action:'OPEN AUDIT',target:c.id});}if(c.audit.status==='Not Sent'){items.push({severity:'amber',title:`${c.name.split(' (')[0]} has no Business Audit sent`,sub:'Enrolled but onboarding is stalled',action:'SEND AUDIT',target:c.id});}if(c.powerSession.status==='Needs Booking'){items.push({severity:'amber',title:`${c.name.split(' (')[0]} has not booked their Power Session`,sub:c.business,action:'BOOK SESSION',target:c.id});}if(c.payment==='Failed'){items.push({severity:'red',title:`${c.name.split(' (')[0]}'s payment failed`,sub:'Access/payment status needs review',action:'OPEN CUSTOMER',target:c.id});}if(c.checkIn.status==='Overdue'){items.push({severity:'red',title:`${c.name.split(' (')[0]}'s monthly check-in is overdue`,sub:c.business,action:'OPEN CHECK-IN',target:c.id});}});return items;}
+function counts(){const items=getActionItems();return{supportPlansDue:customers.filter(c=>c.audit.status==='Submitted').length,checkInsToReview:customers.filter(c=>c.checkIn.status==='Submitted').length,sessionsNeedBooking:customers.filter(c=>c.powerSession.status==='Needs Booking').length,followUpsDue:tasks.filter(t=>!t.done).length,newThisWeek:customers.filter(c=>c.enrolledDaysAgo<=7).length,paymentIssues:customers.filter(c=>c.payment==='Failed').length};}
+function findCustomer(id){return customers.find(c=>c.id===id);} function findTeam(id){return team.find(t=>t.id===id);}
+function statusBadgeClass(s){if(['Completed','Reviewed','Active','Current','Submitted','Booked'].includes(s))return'green';if(['In Progress','Needs Booking','Sent','Started','Under Review'].includes(s))return'amber';if(['Overdue','Failed','Payment Issue','Not Sent','Not Started'].includes(s))return'red';return'neutral';}
+function go(view,id){state.route={view,id:id||null};state.profileTab='overview';render();window.scrollTo(0,0);}
+const NAV=[{key:'dashboard',label:'Dashboard'},{key:'checkins',label:'Monthly Check-Ins',count:()=>customers.filter(c=>c.checkIn.status==='Submitted'||c.checkIn.status==='Overdue').length},{key:'calls',label:'Power Sessions'},{key:'retention',label:'Payment Management',count:()=>customers.filter(c=>c.board==='risk'||c.payment==='Failed').length},{key:'money',label:'Money',count:()=>paymentEvents.filter(e=>!e.access_active).length},{key:'renewals',label:'Renewals',count:()=>customers.filter(c=>c.renewalDaysLeft!=null&&c.renewalDaysLeft<=30).length},{key:'notifications',label:'Notifications',count:()=>getActionItems().length},{key:'communications',label:'Messages',count:()=>conversations.filter(c=>c.status==='open'||c.status==='pending').length},{key:'students',label:'Students',count:()=>customers.length},{key:'community',label:'Community'},{key:'library',label:'Library',expandable:true,children:[{key:'lib-programs',label:'Programs'},{key:'lib-levels',label:'Levels'},{key:'lib-resources',label:'Resources'},{key:'lib-classroom',label:'Classroom'},{key:'lib-forms',label:'Forms'},{key:'lib-questionnaires',label:'Questionnaires'}]},{key:'business',label:'Business',expandable:true,children:[{key:'shopify-customers',label:'Shopify Customers (Live)'},{key:'analytics',label:'Analytics'},{key:'referral-inbox',label:'Referral Inbox'}]},{key:'academy',label:"Educator's Pathway"},{key:'settings',label:'Settings'},{key:'internal',label:'Internal',expandable:true,children:[{key:'tasks',label:'Tasks',count:()=>tasks.filter(t=>!t.done).length},{key:'activity',label:'Activity Log'},{key:'team',label:'Team',count:()=>team.length}]}];
+function navExpanded(key){return state.navExpanded[key]!==false;}
+function renderNav(){const rows=NAV.map(it=>{if(it.expandable){const open=navExpanded(it.key);const childRows=it.children.map(ch=>{const active=state.route.view===ch.key?'active':'';const count=ch.count?ch.count():null;return `<div class="nav-item nav-child ${active}" data-nav="${ch.key}">${ch.label}${count!=null?`<span class="count">${count}</span>`:''}</div>`;}).join('');return `<div class="nav-item nav-parent" data-navtoggle="${it.key}">${it.label}<span class="nav-caret ${open?'open':''}">⌃</span></div>${open?`<div class="nav-children">${childRows}</div>`:''}`;}const active=state.route.view===it.key?'active':'';const count=it.count?it.count():null;return `<div class="nav-item ${active}" data-nav="${it.key}">${it.label}${count!=null?`<span class="count">${count}</span>`:''}</div>`;}).join('');return `<div id="nav"><div class="nav-brand"><div class="mark serif">BTM <em>Operations</em> HQ</div><div class="sub">Beauty Training Mastery</div></div><div class="nav-search"><input placeholder="Search students, orders…" id="global-search"/></div><div class="nav-scroll"><div class="nav-group">${rows}</div></div><div class="nav-foot"><div class="avatar">${initials(session.user.email)}</div><div style="flex:1;min-width:0;"><div class="who" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${session.user.email}</div><div class="role" style="cursor:pointer;" id="signout-btn">Sign out</div></div></div></div>`;}
+function initials(name){return name.split(' (')[0].split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();}
+function renderDashboard(){const c=counts();const items=getActionItems();const newStudents=customers.filter(x=>x.enrolledDaysAgo<=10).slice(0,4);const critical=items.filter(i=>i.severity==='red');const warn=items.filter(i=>i.severity==='amber');const unreadMsgs=conversations.filter(c=>c.status==='open'||c.status==='pending').length;const chip=(co)=>{const target=findCustomer(co.target);const cls=co.severity==='red'?'crit':'warn';return `<span class="urgent-chip ${cls}">${target?target.name.split(' (')[0]:''}</span>`;};const boardRows=customers.filter(cu=>cu.board==='needs'||cu.board==='risk').sort((a,b)=>(a.board==='risk'?0:1)-(b.board==='risk'?0:1));return `<div class="dash-header"><div><h1>Good afternoon, Christine</h1><div class="meta">${customers.length} active students &amp; clients</div></div><div class="quick-actions"><button class="qa-btn primary" data-toast="Add Student form is Phase 1 backend — wiring next.">Add Student</button><button class="qa-btn" data-toast="Program builder is Phase 4.">New Program</button><button class="qa-btn" data-toast="Carried over from Coach Vault reference, can remove.">Nutrition Plan</button><button class="qa-btn" data-nav="communications">Messages · ${unreadMsgs}</button></div></div><div class="demo-banner">⚠ Connected to a real Supabase database now — but Sarah, Jessica, Emma, Priya and Maya are still test records, not real BTM students. No live Shopify Admin API, Stripe, or calendar data is connected yet.</div><div class="pill-row"><div class="pill red" data-nav="students" data-filter="needs-attention"><span class="pill-num">${critical.length+warn.length}</span><span class="pill-label">retention cards</span></div><div class="pill ${c.checkInsToReview?'amber':'neutral'}" data-nav="students" data-filter="checkin-due"><span class="pill-num">${c.checkInsToReview}</span><span class="pill-label">documents to review</span></div><div class="pill ${critical.length?'red':'neutral'}" data-nav="students" data-filter="payment-issue"><span class="pill-num">${critical.length}</span><span class="pill-label">needs action</span></div><div class="pill neutral" data-nav="students" data-filter="new"><span class="pill-num">${c.newThisWeek}</span><span class="pill-label">new this week</span></div><div class="pill ${unreadMsgs?'red':'neutral'}" data-nav="communications"><span class="pill-num">${unreadMsgs}</span><span class="pill-label">unread messages</span></div></div>${items.length?`<div class="urgent-banner"><div class="urgent-icon">!</div><div class="urgent-body"><div class="urgent-title">${critical.length} client${critical.length===1?'':'s'} need urgent follow-up. Plus ${warn.length} needing attention soon.</div><div class="urgent-chips">${items.slice(0,3).map(chip).join('')}${items.length>3?`<span class="urgent-chip">+${items.length-3} more</span>`:''}</div></div><button class="btn primary small" data-nav="students" data-filter="needs-attention">Open inbox</button></div>`:''}<div class="collapsible"><div class="collapsible-head" data-toggle="checkins"><span class="chevron ${state.collapsed.checkins?'':'open'}">›</span><span class="collapsible-title">Documents to Review</span><span class="collapsible-count ${c.checkInsToReview?'hot':''}">${c.checkInsToReview}</span></div>${!state.collapsed.checkins?`<div class="collapsible-body">${c.checkInsToReview?customers.filter(cu=>cu.checkIn.status==='Submitted').map(cu=>`<div class="na-row"><div class="init-avatar">${initials(cu.name)}</div><div style="flex:1"><div class="na-name">${cu.name.split(' (')[0]}</div><div class="na-reason" style="color:var(--text-dim)">Submitted a document for review</div></div><div class="na-actions"><button class="btn small" data-nav="students" data-id="${cu.id}">Open</button></div></div>`).join(''):`<div class="empty-state">No check-ins waiting on you.</div>`}</div>`:''}</div><div class="collapsible"><div class="collapsible-head" data-toggle="needsaction"><span class="chevron ${state.collapsed.needsaction?'':'open'}">›</span><span class="collapsible-title">Needs Action</span><span class="collapsible-count ${items.length?'hot':''}">${items.length}</span><span class="collapsible-hint">Worst first</span></div>${!state.collapsed.needsaction?`<div class="collapsible-body">${items.length?items.map(it=>`<div class="na-row"><div class="init-avatar">${initials(findCustomer(it.target)?.name||'?')}</div><div style="flex:1"><div class="na-name">${it.title}</div><div class="na-reason">${it.sub}</div></div><div class="na-actions"><button class="btn small" data-toast="Cleared from the Needs Action list.">Clear</button><button class="btn primary small" data-nav="students" data-id="${it.target}">Open</button></div></div>`).join(''):`<div class="empty-state">You're all caught up.</div>`}</div>`:''}</div><div class="collapsible"><div class="collapsible-head" data-toggle="newstudents"><span class="chevron ${state.collapsed.newstudents?'':'open'}">›</span><span class="collapsible-title">New Students · First 7 Days</span><span class="collapsible-count">${newStudents.length}</span><span class="collapsible-hint">Stuck first</span></div>${!state.collapsed.newstudents?`<div class="collapsible-body">${newStudents.length?newStudents.map(s=>`<div class="na-row"><div class="init-avatar">${initials(s.name)}</div><div style="flex:1"><div class="na-name">${s.name.split(' (')[0]}</div><div class="na-reason" style="color:var(--text-dim)">Purchase ${s.onboarding.purchase?'✓':'✕'} · Access ${s.onboarding.access?'✓':'✕'} · Onboarding ${s.onboarding.onboarding?'✓':'✕'} · Audit ${s.onboarding.audit==='ok'?'✓':s.onboarding.audit==='pending'?'⏳':'✕'}</div></div><button class="btn small" data-nav="students" data-id="${s.id}">Open</button></div>`).join(''):`<div class="empty-state">No students in their first 7 days.</div>`}</div>`:''}</div><div class="collapsible"><div class="collapsible-head" data-toggle="board"><span class="chevron ${state.collapsed.board?'':'open'}">›</span><span class="collapsible-title">Student Board</span><span class="collapsible-count ${boardRows.length?'hot':''}">${boardRows.length}</span><span class="collapsible-hint">Needs Attention + At Risk shown</span></div>${!state.collapsed.board?`<div class="collapsible-body">${boardRows.length?boardRows.map(cu=>{const flagCount=(cu.payment==='Failed'?1:0)+(cu.checkIn.status==='Overdue'?1:0)+(cu.audit.status==='Not Sent'?1:0)+(cu.powerSession.status==='Needs Booking'?1:0);return `<div class="board-row" data-nav="students" data-id="${cu.id}"><div class="init-avatar">${initials(cu.name)}</div><div class="name">${cu.name.split(' (')[0]}</div><div class="flag-dots">${[0,1,2].map(i=>`<span class="${i<flagCount?'on':''}"></span>`).join('')}</div><div class="board-num">${flagCount}</div><div class="board-last">${cu.lastActivity}</div></div>`;}).join(''):`<div class="empty-state">Nobody needs attention right now.</div>`}<div class="board-foot" data-nav="students" data-filter="needs-attention">Open the full student board (${boardRows.length}) →</div></div>`:''}</div><div class="collapsible"><div class="collapsible-head" data-toggle="team"><span class="chevron ${state.collapsed.team?'':'open'}">›</span><span class="collapsible-title">Team</span></div>${!state.collapsed.team?`<div class="collapsible-body"><div class="team-bar-wrap"><div class="team-bar-head"><span class="role-tag">HEAD COACH</span><span style="font-size:12px;color:var(--text-dim)">${team.length} coaches · ${customers.length} clients</span><span class="attn-tag">${boardRows.length} need attention</span></div><div class="team-bar"><div class="seg green" style="flex:${customers.filter(c=>c.board==='on-track').length||0.01}"></div><div class="seg amber" style="flex:${customers.filter(c=>c.board==='needs').length||0.01}"></div><div class="seg red" style="flex:${customers.filter(c=>c.board==='risk').length||0.01}"></div></div></div>${team.map(t=>`<div class="board-row" data-nav="team"><div class="init-avatar">${initials(t.name)}</div><div class="name">${t.name} <span style="color:var(--text-faint);font-weight:400">— ${t.role}</span></div><div style="font-size:12px;color:var(--text-dim)">${customers.filter(c=>c.assigned===t.id).length} clients</div><div class="board-last">${tasks.filter(k=>k.assigned===t.id&&!k.done).length} open</div></div>`).join('')}</div>`:''}</div>`;}
+function renderStudents(){let list=customers.slice();const f=state.studentFilter;if(f==='needs-attention')list=list.filter(c=>c.board==='needs'||c.board==='risk');if(f==='new')list=list.filter(c=>c.enrolledDaysAgo<=7);if(f==='payment-issue')list=list.filter(c=>c.payment==='Failed');if(f==='audit-pending')list=list.filter(c=>c.audit.status==='Submitted'||c.audit.status==='Not Sent');if(f==='checkin-due')list=list.filter(c=>c.checkIn.status==='Overdue'||c.checkIn.status==='Submitted');if(f==='session-pending')list=list.filter(c=>c.powerSession.status==='Needs Booking');if(f==='level1')list=list.filter(c=>c.level==='Level 1');if(f==='level2')list=list.filter(c=>c.level==='Level 2');if(f==='educator-pathway')list=list.filter(c=>c.educatorPathway);if(state.studentSearch){const q=state.studentSearch.toLowerCase();list=list.filter(c=>c.name.toLowerCase().includes(q)||c.business.toLowerCase().includes(q));}const chips=[{k:'all',l:'All'},{k:'needs-attention',l:'Needs Attention'},{k:'new',l:'New This Week'},{k:'level1',l:'Level 1'},{k:'level2',l:'Level 2'},{k:'educator-pathway',l:"Educator's Pathway"},{k:'payment-issue',l:'Payment Issue'},{k:'audit-pending',l:'Audit Pending'},{k:'checkin-due',l:'Check-in Due'},{k:'session-pending',l:'Power Session Pending'}];return `<div class="topline"><div><h1>Students</h1><div class="meta">${list.length} shown · ${customers.length} total</div></div></div><div class="filter-row">${chips.map(c=>`<div class="chip ${state.studentFilter===c.k?'active':''}" data-studentfilter="${c.k}">${c.l}</div>`).join('')}<input class="search-box" placeholder="Search name or business…" id="student-search" value="${state.studentSearch}"/></div><table><thead><tr><th>Student</th><th>Business</th><th>Program</th><th>Level</th><th>Payment</th><th>Audit</th><th>Check-in</th><th>Power Session</th><th>Last activity</th><th>Status</th></tr></thead><tbody>${list.map(c=>`<tr data-nav="students" data-id="${c.id}"><td>${c.name.split(' (')[0]}${c.educatorPathway?` <span class="badge neutral" style="font-size:10px;">Educator's Pathway</span>`:''}</td><td>${c.business}</td><td>${c.program}</td><td><span class="badge ${c.level==='Level 2'?'amber':'neutral'}">${c.level}</span></td><td><span class="badge ${statusBadgeClass(c.payment)}">${c.payment}</span></td><td><span class="badge ${statusBadgeClass(c.audit.status)}">${c.audit.status}</span></td><td><span class="badge ${statusBadgeClass(c.checkIn.status)}">${c.checkIn.status}</span></td><td><span class="badge ${statusBadgeClass(c.powerSession.status)}">${c.powerSession.status}</span></td><td>${c.lastActivity}</td><td><span class="badge ${statusBadgeClass(c.status)}">${c.status}</span></td></tr>`).join('')||`<tr><td colspan="10"><div class="empty-state">No records match this filter.</div></td></tr>`}</tbody></table>`;}
+function renderProfile(id){const c=findCustomer(id);if(!c)return `<div class="empty-state">Record not found.</div>`;const nextAction=getNextAction(c);const tabs=['overview','audit','support-plan','check-ins','power-sessions','notes'];const tabLabels={overview:'Overview',audit:'Business Audit','support-plan':'Support Plan','check-ins':'Check-Ins','power-sessions':'Power Sessions',notes:'Notes'};return `<div class="breadcrumb"><span data-nav="students">Students</span> / ${c.name.split(' (')[0]}</div><div class="profile-head"><div><h2 class="p-name">${c.name.split(' (')[0]} <span style="font-size:12px;color:var(--text-faint);font-family:'Inter'">(demo record)</span></h2><div class="p-biz">${c.business}</div><div class="p-contact">${c.email} · ${c.phone}</div><div class="profile-meta"><div class="m"><span class="k">Program</span>${c.program}</div><div class="m"><span class="k">Level</span>${c.level}${c.level==='Level 1'?' ($199/wk)':' ($199/wk + $99/wk add-on)'}</div><div class="m"><span class="k">Assigned to</span>${findTeam(c.assigned).name}</div><div class="m"><span class="k">Last active</span>${c.lastActivity}</div><div class="m"><span class="k">Status</span><span class="badge ${statusBadgeClass(c.status)}">${c.status}</span></div></div></div><div class="profile-actions"><button class="btn" data-note-focus="1">Add Note</button><button class="btn" data-toast="Goal-setting UI is Phase 2.">Set Goal</button><button class="btn" data-toast="Needs Google Calendar credentials — not connected yet.">Book Power Session</button><button class="btn" data-nav="communications" data-commsjump="${c.id}">Send Message</button><button class="btn ghost" data-toast="Student platform URL/API not yet provided by BTM.">View Student Experience</button></div></div>${nextAction.text?`<div class="next-action ${nextAction.severity}"><div><div class="na-label">Your next action</div><div class="na-text">${nextAction.text}</div></div><button class="btn primary small" data-tabjump="${nextAction.tab}">${nextAction.cta}</button></div>`:''}<div class="tabs">${tabs.map(t=>`<div class="tab ${state.profileTab===t?'active':''}" data-tab="${t}">${tabLabels[t]}</div>`).join('')}</div><div id="tab-content">${renderProfileTab(c)}</div>`;}
+function getNextAction(c){if(c.payment==='Failed')return{severity:'',text:`Payment failed — access/payment status needs review before continuing advisory work.`,cta:'REVIEW PAYMENT',tab:'overview'};if(c.audit.status==='Submitted')return{severity:'',text:`Business audit submitted ${c.audit.submittedAt}. Support plan due in ${c.audit.deadlineHoursLeft}h.`,cta:'OPEN AUDIT',tab:'audit'};if(c.audit.status==='Not Sent')return{severity:'amber',text:`No business audit has been sent yet.`,cta:'SEND AUDIT',tab:'audit'};if(c.checkIn.status==='Overdue')return{severity:'',text:`Monthly check-in is overdue.`,cta:'FOLLOW UP',tab:'check-ins'};if(c.powerSession.status==='Needs Booking')return{severity:'amber',text:`Power Session has not been booked.`,cta:'BOOK SESSION',tab:'power-sessions'};return{severity:'green',text:`No outstanding action — this record is on track.`,cta:'',tab:'overview'};}
+function renderProfileTab(c){const t=state.profileTab;if(t==='overview'){return `<div class="card"><h3>Journey Status</h3><div class="kv"><div class="item"><div class="k">Enrolment</div><div class="v">${c.enrolledDaysAgo} days ago</div></div><div class="item"><div class="k">Payment status</div><div class="v"><span class="badge ${statusBadgeClass(c.payment)}">${c.payment}</span></div></div><div class="item"><div class="k">Business audit</div><div class="v"><span class="badge ${statusBadgeClass(c.audit.status)}">${c.audit.status}</span></div></div><div class="item"><div class="k">Support plan</div><div class="v"><span class="badge ${statusBadgeClass(c.supportPlan.status)}">${c.supportPlan.status}</span></div></div><div class="item"><div class="k">Monthly check-in</div><div class="v"><span class="badge ${statusBadgeClass(c.checkIn.status)}">${c.checkIn.status}</span></div></div><div class="item"><div class="k">Power Session</div><div class="v"><span class="badge ${statusBadgeClass(c.powerSession.status)}">${c.powerSession.status}</span></div></div></div></div><div class="card"><h3>Recent Activity</h3>${activityLog.filter(a=>a.text.includes(c.name.split(' (')[0])).slice(0,5).map(a=>`<div class="log-row"><div class="log-time">${a.time}</div><div>${a.text}</div></div>`).join('')||'<div class="empty-state">No logged activity for this record yet.</div>'}</div>`;}if(t==='audit'){return `<div class="card"><h3>Business Audit</h3><div class="kv"><div class="item"><div class="k">Status</div><div class="v"><span class="badge ${statusBadgeClass(c.audit.status)}">${c.audit.status}</span></div></div><div class="item"><div class="k">Submitted</div><div class="v">${c.audit.submittedAt||'—'}</div></div><div class="item"><div class="k">72-hour window</div><div class="v">${c.audit.deadlineHoursLeft!=null?c.audit.deadlineHoursLeft+'h remaining':'—'}</div></div><div class="item"><div class="k">Reviewer</div><div class="v">${findTeam(c.assigned).name}</div></div></div></div><div class="placeholder-block"><div class="pt">Full audit responses aren't wired up yet</div><div class="ps">This will display the actual submitted audit form once the audit intake is confirmed and connected. Phase 2 build.</div></div>`;}if(t==='support-plan'){return `<div class="card"><h3>Goals</h3>${c.supportPlan.goals.length?c.supportPlan.goals.map(g=>`<div class="task-row"><div class="task-title">${g.goal} <span style="color:var(--text-faint)">— target ${g.target}</span></div><span class="priority-tag ${g.priority}">${g.priority}</span><span class="badge ${statusBadgeClass(g.status)}">${g.status}</span></div>`).join(''):`<div class="empty-state">No goals set yet.</div>`}</div><div class="placeholder-block"><div class="pt">Action-item tracking is Phase 2</div><div class="ps">Owners, due dates and completion tracking build on top of this goals view.</div></div>`;}if(t==='check-ins'){return `<div class="card"><h3>Monthly Check-In</h3><div class="kv"><div class="item"><div class="k">Status</div><div class="v"><span class="badge ${statusBadgeClass(c.checkIn.status)}">${c.checkIn.status}</span></div></div></div></div><div class="placeholder-block"><div class="pt">Check-in submission history is Phase 2</div><div class="ps">Full check-in form responses, priority flags, and follow-up tracking build here once the check-in intake is connected.</div></div>`;}if(t==='power-sessions'){return `<div class="card"><h3>Power Sessions</h3><div class="kv"><div class="item"><div class="k">Status</div><div class="v"><span class="badge ${statusBadgeClass(c.powerSession.status)}">${c.powerSession.status}</span></div></div></div></div><div class="placeholder-block"><div class="pt">Calendar &amp; booking is Phase 2</div><div class="ps">Needs Google Calendar credentials, not yet provided.</div></div>`;}if(t==='notes'){return `<div class="card"><h3>Notes</h3><div id="notes-list">${c.notes.length?c.notes.map(n=>`<div class="note">${n.text}<div class="note-meta">${n.author} · ${n.when}</div></div>`).join(''):`<div class="empty-state">No notes yet.</div>`}</div><div class="note-input"><textarea id="new-note" placeholder="Add a note about ${c.name.split(' (')[0]}…"></textarea><button class="btn primary" id="save-note">Save</button></div></div>`;}return'';}
+function renewalState(days){if(days==null)return{key:'missing',label:'Missing Date',cls:'neutral'};if(days<0)return{key:'overdue',label:'Overdue',cls:'red'};if(days<=7)return{key:'critical',label:'Critical',cls:'red'};if(days<=30)return{key:'next30',label:'Next 30 Days',cls:'amber'};if(days<=60)return{key:'next60',label:'Next 60 Days',cls:'amber'};if(days<=90)return{key:'next90',label:'Next 90 Days',cls:'neutral'};return{key:'continuity',label:'Continuity',cls:'green'};}
+function moneyText(value){return String(value==null?'':value).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function formatMoney(amount,currency){if(amount==null||amount===''||!Number.isFinite(Number(amount)))return'—';try{return new Intl.NumberFormat('en-AU',{style:'currency',currency:currency||'AUD'}).format(Number(amount));}catch(e){return `${currency||'AUD'} ${Number(amount).toFixed(2)}`;}}
+function renderMoney(){const active=paymentEvents.filter(e=>e.access_active).length,review=paymentEvents.filter(e=>!e.access_active).length,total=paymentEvents.filter(e=>e.access_active&&e.amount!=null).reduce((sum,e)=>sum+Number(e.amount||0),0);return `<div class="topline"><div><h1>Money</h1><div class="meta">Live Stripe and Shopify payment events received through Make</div></div></div><div class="scope-grid"><div class="scope-card"><div class="scope-num">${paymentEvents.length}</div><div class="scope-label">Payment Events</div><div class="scope-sub">Latest 250 events</div></div><div class="scope-card"><div class="scope-num">${active}</div><div class="scope-label">Access Activated</div><div class="scope-sub">Successful payments</div></div><div class="scope-card"><div class="scope-num">${review}</div><div class="scope-label">Needs Review</div><div class="scope-sub">Payment follow-up</div></div><div class="scope-card"><div class="scope-num">${formatMoney(total,'AUD')}</div><div class="scope-label">Recorded Value</div><div class="scope-sub">Successful loaded events</div></div></div><table><thead><tr><th>Received</th><th>Student</th><th>Event</th><th>Status</th><th>Amount</th><th>Access</th><th>Source</th></tr></thead><tbody>${paymentEvents.map(e=>{const c=findCustomer(e.student_id),status=e.subscription_status||e.payment_status||'received';return `<tr ${c?`data-nav="students" data-id="${c.id}"`:''}><td>${moneyText(e.created_at?new Date(e.created_at).toLocaleString('en-AU'):'—')}</td><td>${moneyText(c?c.name:'Unmatched student')}</td><td>${moneyText(e.event_type||'payment.updated')}</td><td><span class="badge ${e.access_active?'green':'red'}">${moneyText(status)}</span></td><td>${moneyText(formatMoney(e.amount,e.currency))}</td><td><span class="badge ${e.access_active?'green':'red'}">${e.access_active?'Active':'Review'}</span></td><td>${moneyText(e.stripe_subscription_id||e.stripe_customer_id||e.shopify_customer_id||'—')}</td></tr>`;}).join('')||'<tr><td colspan="7"><div class="empty-state">No payment events received yet.</div></td></tr>'}</tbody></table>`;}
+function renderRenewals(){let list=customers.slice().sort((a,b)=>(a.renewalDaysLeft??999)-(b.renewalDaysLeft??999));const f=state.renewalFilter||'all';if(f!=='all')list=list.filter(c=>renewalState(c.renewalDaysLeft).key===f);const chips=[{k:'all',l:'All'},{k:'missing',l:'Missing Date'},{k:'overdue',l:'Overdue'},{k:'critical',l:'Critical'},{k:'next30',l:'Next 30 Days'},{k:'next60',l:'Next 60 Days'},{k:'next90',l:'Next 90 Days'},{k:'continuity',l:'Continuity'}];return `<div class="topline"><div><h1>Renewals</h1><div class="meta">Live renewal dates from student subscription records</div></div></div><div class="filter-row">${chips.map(c=>`<div class="chip ${f===c.k?'active':''}" data-renewalfilter="${c.k}">${c.l}</div>`).join('')}</div><table><thead><tr><th>Customer</th><th>Program</th><th>Level</th><th>Payment</th><th>Assigned</th><th>Renewal</th><th>Status</th></tr></thead><tbody>${list.map(c=>{const rs=renewalState(c.renewalDaysLeft),owner=findTeam(c.assigned);return `<tr data-nav="students" data-id="${c.id}"><td>${moneyText(c.name.split(' (')[0])}</td><td>${moneyText(c.program||'—')}</td><td>${moneyText(c.level||'—')}</td><td><span class="badge ${statusBadgeClass(c.payment)}">${moneyText(c.payment||'Pending')}</span></td><td>${moneyText(owner?owner.name:'Unassigned')}</td><td>${c.renewalDaysLeft==null?'—':c.renewalDaysLeft<0?`${Math.abs(c.renewalDaysLeft)}d overdue`:`${c.renewalDaysLeft}d left`}</td><td><span class="badge ${rs.cls}">${rs.label}</span></td></tr>`;}).join('')||'<tr><td colspan="7"><div class="empty-state">No renewal records match this filter.</div></td></tr>'}</tbody></table>`;}
+function renderPlaceholderPage(title,note,phase){return `<div class="topline"><div><h1>${title}</h1><div class="meta">${phase||''}</div></div></div><div class="placeholder-block"><div class="pt">${title} isn't built out yet</div><div class="ps">${note}</div></div>`;}
+function renderCheckins(){const list=customers.slice().sort((a,b)=>{const w=s=>s==='Overdue'?0:s==='Submitted'?1:2;return w(a.checkIn.status)-w(b.checkIn.status);});return `<div class="topline"><div><h1>Monthly Check-Ins</h1><div class="meta">Documents students submit each month</div></div></div><table><thead><tr><th>Student</th><th>Program</th><th>Level</th><th>Assigned</th><th>Document Status</th><th></th></tr></thead><tbody>${list.map(c=>`<tr data-nav="students" data-id="${c.id}"><td>${c.name.split(' (')[0]}</td><td>${c.program}</td><td><span class="badge ${c.level==='Level 2'?'amber':'neutral'}">${c.level}</span></td><td>${findTeam(c.assigned).name}</td><td><span class="badge ${statusBadgeClass(c.checkIn.status)}">${c.checkIn.status}</span></td><td>${c.checkIn.status!=='Not Due'?`<button class="btn small" data-nav="students" data-id="${c.id}">Review</button>`:''}</td></tr>`).join('')}</tbody></table><div class="placeholder-block" style="margin-top:16px;"><div class="pt">Full document submissions are Phase 2</div><div class="ps">This shows status only.</div></div>`;}
+function renderRetention(){const atRisk=customers.filter(c=>c.board==='risk');const paymentIssues=customers.filter(c=>c.payment==='Failed');const f=state.retentionTab||'at-risk';const tabs=[{k:'at-risk',l:'At Risk',count:atRisk.length},{k:'payment',l:'Payment Issues',count:paymentIssues.length},{k:'cancellation',l:'Cancellation Requests',count:0},{k:'winback',l:'Win Back',count:0}];let rows=[];if(f==='at-risk')rows=atRisk;if(f==='payment')rows=paymentIssues;return `<div class="topline"><div><h1>Payment Management</h1><div class="meta">Payment issues, at-risk, cancellations and win-back</div></div></div><div class="filter-row">${tabs.map(t=>`<div class="chip ${f===t.k?'active':''}" data-retentiontab="${t.k}">${t.l}<span style="margin-left:6px;color:var(--text-faint)">${t.count}</span></div>`).join('')}</div>${(f==='at-risk'||f==='payment')?`<table><thead><tr><th>Student</th><th>Program</th><th>Assigned</th><th>Signal</th><th></th></tr></thead><tbody>${rows.map(c=>`<tr data-nav="students" data-id="${c.id}"><td>${c.name.split(' (')[0]}</td><td>${c.program}</td><td>${findTeam(c.assigned).name}</td><td>${f==='payment'?`<span class="badge red">Payment Failed</span>`:`<span class="badge amber">Multiple overdue actions</span>`}</td><td><button class="btn small" data-nav="students" data-id="${c.id}">Open</button></td></tr>`).join('')||`<tr><td colspan="5"><div class="empty-state">Nobody in this category right now.</div></td></tr>`}</tbody></table>`:`<div class="empty-state">Needs a real signal once students can request cancellation in-portal or lapse past their renewal date.</div>`}`;}
+function renderNotifications(){const items=getActionItems();return `<div class="topline"><div><h1>Notifications</h1><div class="meta">Everything that needs a look</div></div></div><div class="card">${items.length?items.map(it=>`<div class="na-row"><div class="init-avatar">${initials(findCustomer(it.target)?.name||'?')}</div><div style="flex:1"><div class="na-name">${it.title}</div><div class="na-reason">${it.sub}</div></div><button class="btn small" data-nav="students" data-id="${it.target}">Open</button></div>`).join(''):`<div class="empty-state">Nothing to notify you about.</div>`}</div>`;}
+function renderCalls(){const list=customers.slice();return `<div class="topline"><div><h1>Power Sessions</h1><div class="meta">Monthly power session calls</div></div></div><table><thead><tr><th>Student</th><th>Coach / Advisor</th><th>Status</th><th></th></tr></thead><tbody>${list.map(c=>`<tr data-nav="students" data-id="${c.id}"><td>${c.name.split(' (')[0]}</td><td>${findTeam(c.assigned).name}</td><td><span class="badge ${statusBadgeClass(c.powerSession.status)}">${c.powerSession.status}</span></td><td>${c.powerSession.status==='Needs Booking'?`<button class="btn small" data-toast="Needs Google Calendar credentials.">Book</button>`:''}</td></tr>`).join('')}</tbody></table>`;}
+async function findOrCreateConversation(studentId){let convo=conversations.find(c=>c.studentId===studentId);if(convo)return convo;const student=findCustomer(studentId);if(!student)return null;try{const{data,error}=await sb.from('conversations').insert({student_id:studentId,customer_name:student.name.split(' (')[0],status:'open'}).select('*, messages(*)').single();if(error)throw error;convo={id:data.id,studentId:data.student_id,name:data.customer_name,status:data.status,unreadForAdmin:data.unread_for_admin,assigned:data.assigned_to,thread:[]};conversations.unshift(convo);return convo;}catch(e){toast('Could not open conversation — '+(e.message||e));return null;}}
+function commsSortWeight(c){if(c.status==='open'&&c.unreadForAdmin)return 0;if(c.status==='open')return 1;if(c.status==='pending')return 1;return 2;}
+function commsStatusLabel(c){if(c.status==='open'&&c.unreadForAdmin)return'unread';if(c.status==='open')return'open';if(c.status==='pending')return'pending';if(c.status==='resolved')return'resolved';return c.status;}
+function renderCommunications(){const list=conversations.slice().sort((a,b)=>commsSortWeight(a)-commsSortWeight(b));const openId=state.commsOpenId||(list[0]&&list[0].id);const open=conversations.find(c=>c.id===openId);const openStudent=open?findCustomer(open.studentId):null;return `<div class="topline"><div><h1>Communications</h1><div class="meta">Every student conversation, in one inbox</div></div></div><div class="conn-banner"><span class="conn-dot"></span><div class="conn-text"><b>Connected to:</b> Supabase, live. Conversations link to Shopify customers via <span class="mono">shopify_customer_id</span> where available. Native messaging replaces the earlier plan to mirror Shopify's inbox (no external API to pull threads from).</div></div><div class="comms-layout"><div class="comms-list">${list.map(c=>`<div class="comms-row ${c.id===openId?'active':''}" data-commsopen="${c.id}"><div class="init-avatar">${initials(c.name)}</div><div class="cr-body"><div class="cr-name">${c.name} ${commsStatusLabel(c)==='unread'?'<span class="unread-dot"></span>':''}</div><div class="cr-preview">${c.thread.length?(c.thread[c.thread.length-1].from==='team'?'You: ':'')+c.thread[c.thread.length-1].text:'No messages yet'}</div></div><div class="cr-time">${c.thread.length?c.thread[c.thread.length-1].time:''}</div></div>`).join('')||`<div class="empty-state">No conversations yet.</div>`}</div><div class="comms-thread">${open?`<div class="comms-thread-head"><div><div class="th-name">${open.name}</div><div class="th-sub">${openStudent?openStudent.business+' · ':''}assigned to ${open.assigned?findTeam(open.assigned).name:'Unassigned'} · <span class="badge ${commsStatusLabel(open)==='resolved'?'green':commsStatusLabel(open)==='unread'?'red':'amber'}">${commsStatusLabel(open)}</span></div></div>${openStudent?`<button class="btn small" data-nav="students" data-id="${openStudent.id}">Open profile</button>`:''}</div><div class="comms-msgs">${open.thread.length?open.thread.map(m=>`<div><div class="msg-bubble ${m.from}">${m.text}</div><div class="msg-time">${m.time}</div></div>`).join(''):`<div class="empty-state">No messages in this thread yet.</div>`}</div><div class="comms-reply"><input type="text" placeholder="Reply to ${open.name}…" id="comms-reply-input"/><button class="btn primary small" id="comms-reply-send">Send</button></div>`:`<div class="empty-state">Select a conversation.</div>`}</div></div>`;}
+function renderTasks(){const open=tasks.filter(t=>!t.done);const done=tasks.filter(t=>t.done);return `<div class="topline"><div><h1>Tasks</h1><div class="meta">${open.length} open</div></div></div><div class="card"><h3>Open</h3>${open.length?open.map(t=>`<div class="task-row"><div class="task-check" data-task="${t.id}"></div><div class="task-title">${t.title}<div style="font-size:11px;color:var(--text-faint);margin-top:2px;">Due ${t.due} · ${findTeam(t.assigned).name}${t.client?` · <span data-nav="students" data-id="${t.client}" style="text-decoration:underline;cursor:pointer;">view record</span>`:''}</div></div><span class="priority-tag ${t.priority}">${t.priority}</span></div>`).join(''):'<div class="empty-state">Nothing outstanding.</div>'}</div><div class="card"><h3>Completed</h3>${done.length?done.map(t=>`<div class="task-row"><div class="task-check done" data-task="${t.id}"></div><div class="task-title done">${t.title}</div></div>`).join(''):'<div class="empty-state">Nothing completed yet.</div>'}</div>`;}
+function renderActivity(){return `<div class="topline"><div><h1>Activity Log</h1><div class="meta">Every logged operational action</div></div></div><div class="card">${activityLog.map(a=>`<div class="log-row"><div class="log-time">${a.time}</div><div>${a.text} <span style="color:var(--text-faint)">— ${a.user}</span></div></div>`).join('')}</div>`;}
+function renderTeam(){return `<div class="topline"><div><h1>Team</h1><div class="meta">${team.length} members</div></div></div><table><thead><tr><th>Name</th><th>Role</th><th>Assigned clients</th><th>Open tasks</th></tr></thead><tbody>${team.map(t=>`<tr><td>${t.name}</td><td>${t.role}</td><td>${customers.filter(c=>c.assigned===t.id).length}</td><td>${tasks.filter(k=>k.assigned===t.id&&!k.done).length}</td></tr>`).join('')}</tbody></table><div class="placeholder-block" style="margin-top:16px;"><div class="pt">Role-based permissions are Phase 1 backend work</div><div class="ps">Owner/Admin, Operations, Coach/Advisor and Content Manager roles need server-side authorization once this moves off a static demo.</div></div>`;}
+function toast(msg){let t=document.getElementById('toast');if(!t){t=document.createElement('div');t.id='toast';t.style.cssText='position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--surface-raised);border:1px solid var(--border);color:var(--text);padding:10px 18px;border-radius:8px;font-size:13px;z-index:999;box-shadow:0 8px 24px rgba(0,0,0,.4);';document.body.appendChild(t);}t.textContent=msg;t.style.opacity='1';clearTimeout(window.__toastTimer);window.__toastTimer=setTimeout(()=>{t.style.opacity='0';},2600);}
+function renderMain(){const v=state.route.view;if(v==='dashboard')return renderDashboard();if(v==='checkins')return renderCheckins();if(v==='retention')return renderRetention();if(v==='money')return renderMoney();if(v==='notifications')return renderNotifications();if(v==='calls')return renderCalls();if(v==='community')return renderPlaceholderPage('Community','Not built into the front-end platform yet.','Waiting on Donamae');if(v==='lib-programs')return renderPlaceholderPage('Programs','Program → Module → Lesson hierarchy.','Phase 4');if(v==='lib-levels')return renderPlaceholderPage('Levels','Level 1 ($199/wk) and Level 2 (+$99/wk) content and access rules.','Phase 4');if(v==='lib-resources')return renderPlaceholderPage('Resources','PDFs, videos, templates, guides.','Phase 4');if(v==='lib-classroom')return renderPlaceholderPage('Classroom','Lesson playback / classroom view.','Phase 4');if(v==='lib-forms')return renderPlaceholderPage('Forms','Likely where the Business Audit intake form lives.','Phase 2');if(v==='lib-questionnaires')return renderPlaceholderPage('Questionnaires','Monthly check-in questionnaire.','Phase 2');if(v==='shopify-customers')return renderShopifyCustomers();if(v==='analytics')return renderPlaceholderPage('Analytics','Needs real historical data.','Phase 6');if(v==='referral-inbox')return renderPlaceholderPage('Referral Inbox','Not in original BTM spec — confirm with Bree.','Not yet scoped');if(v==='academy')return renderPlaceholderPage("Educator's Pathway",'Focuses on the Educator\u2019s Pathway offer ($1,200–$1,400 one-off).','Phase 4');if(v==='settings')return renderPlaceholderPage('Settings','Role permissions, team management.','Phase 1 backend');if(v==='students')return state.route.id?renderProfile(state.route.id):renderStudents();if(v==='communications')return renderCommunications();if(v==='renewals')return renderRenewals();if(v==='tasks')return renderTasks();if(v==='activity')return renderActivity();if(v==='team')return renderTeam();return renderDashboard();}
+function render(){if(!session){document.getElementById('app').innerHTML=renderLogin();bindLoginEvents();return;}if(state.loading){document.getElementById('app').innerHTML=`<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;width:100%;background:var(--bg);color:var(--text-dim);font-size:14px;">Loading BTM Operations HQ…</div>`;return;}if(state.loadError){document.getElementById('app').innerHTML=`<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;width:100%;background:var(--bg);color:var(--red);font-size:14px;text-align:center;padding:40px;">Couldn't load data from Supabase.<br><span style="color:var(--text-faint);font-size:12px;">${state.loadError}</span><br><br>${state.loadError.includes('is_current_user_admin')||state.loadError.toLowerCase().includes('permission')||state.loadError.toLowerCase().includes('policy')?'<span style="color:var(--text-faint);font-size:12px;">Your email may not be on the BTM Operations team list yet.</span>':''}</div>`;return;}document.getElementById('app').innerHTML=`${renderNav()}<div id="main">${renderMain()}</div>`;bindEvents();}
+function bindLoginEvents(){const sendBtn=document.getElementById('login-send');if(sendBtn){sendBtn.addEventListener('click',async()=>{const emailInput=document.getElementById('login-email');const email=emailInput.value.trim();if(!email){authError='Enter your email first.';render();return;}authError=null;sendBtn.textContent='Sending…';sendBtn.disabled=true;try{const{error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:window.location.origin}});if(error)throw error;state.magicLinkSent=true;state.magicLinkSentTo=email;}catch(e){authError=e.message||String(e);}render();});}}
+function bindEvents(){const shopifyRefresh=document.querySelector('[data-shopifyrefresh]');if(shopifyRefresh){shopifyRefresh.addEventListener('click',()=>{shopifyCustomers=null;shopifyLoadError=null;loadShopifyCustomers();});}const signOutBtn=document.getElementById('signout-btn');if(signOutBtn){signOutBtn.addEventListener('click',async()=>{await sb.auth.signOut();});}document.querySelectorAll('[data-nav]').forEach(node=>{node.addEventListener('click',async(e)=>{const view=node.getAttribute('data-nav');const id=node.getAttribute('data-id');const filter=node.getAttribute('data-filter');const commsjump=node.getAttribute('data-commsjump');if(view==='students'&&!id)state.studentFilter=filterMap(filter);if(commsjump){const convo=await findOrCreateConversation(commsjump);if(convo)state.commsOpenId=convo.id;}go(view,id);});});document.querySelectorAll('[data-studentfilter]').forEach(node=>{node.addEventListener('click',()=>{state.studentFilter=node.getAttribute('data-studentfilter');render();});});document.querySelectorAll('[data-renewalfilter]').forEach(node=>{node.addEventListener('click',()=>{state.renewalFilter=node.getAttribute('data-renewalfilter');render();});});document.querySelectorAll('[data-retentiontab]').forEach(node=>{node.addEventListener('click',()=>{state.retentionTab=node.getAttribute('data-retentiontab');render();});});document.querySelectorAll('[data-commsopen]').forEach(node=>{node.addEventListener('click',async()=>{const id=node.getAttribute('data-commsopen');state.commsOpenId=id;const convo=conversations.find(c=>c.id===id);if(convo&&convo.unreadForAdmin){convo.unreadForAdmin=false;try{await sb.from('conversations').update({unread_for_admin:false}).eq('id',id);}catch(e){}}render();});});const commsSend=document.getElementById('comms-reply-send');if(commsSend){commsSend.addEventListener('click',async()=>{const input=document.getElementById('comms-reply-input');const convo=conversations.find(c=>c.id===state.commsOpenId);const text=input.value.trim();if(text&&convo){convo.thread.push({from:'team',text,time:'Just now'});render();try{await sb.from('messages').insert({conversation_id:convo.id,sender_type:'admin',sender_name:'Christine',body:text});await sb.from('conversations').update({status:'open',unread_for_student:true,unread_for_admin:false,updated_at:new Date().toISOString()}).eq('id',convo.id);convo.status='open';const studentName=convo.name;logActivity(`Replied to ${studentName} in Communications`,'Christine',convo.studentId);}catch(e){toast('Failed to send — '+(e.message||e));}}});}const search=document.getElementById('student-search');if(search){search.addEventListener('input',(e)=>{state.studentSearch=e.target.value;render();document.getElementById('student-search').focus();document.getElementById('student-search').selectionStart=document.getElementById('student-search').value.length;});}document.querySelectorAll('[data-tab]').forEach(node=>{node.addEventListener('click',()=>{state.profileTab=node.getAttribute('data-tab');render();});});document.querySelectorAll('[data-tabjump]').forEach(node=>{node.addEventListener('click',()=>{state.profileTab=node.getAttribute('data-tabjump');render();});});document.querySelectorAll('[data-toggle]').forEach(node=>{node.addEventListener('click',(e)=>{e.stopPropagation();const key=node.getAttribute('data-toggle');state.collapsed[key]=!state.collapsed[key];render();});});document.querySelectorAll('[data-navtoggle]').forEach(node=>{node.addEventListener('click',(e)=>{e.stopPropagation();const key=node.getAttribute('data-navtoggle');state.navExpanded[key]=!navExpanded(key);render();});});document.querySelectorAll('[data-toast]').forEach(node=>{node.addEventListener('click',()=>toast(node.getAttribute('data-toast')));});document.querySelectorAll('[data-task]').forEach(node=>{node.addEventListener('click',async()=>{const id=node.getAttribute('data-task');const task=tasks.find(t=>t.id===id);task.done=!task.done;render();try{await sb.from('tasks').update({done:task.done,completed_at:task.done?new Date().toISOString():null}).eq('id',id);logActivity(`Task "${task.title}" marked ${task.done?'complete':'open'}`,'Christine',task.client);}catch(e){task.done=!task.done;render();toast('Failed to save — '+(e.message||e));}});});const saveNote=document.getElementById('save-note');if(saveNote){saveNote.addEventListener('click',async()=>{const ta=document.getElementById('new-note');const body=ta.value.trim();if(body){const c=findCustomer(state.route.id);c.notes.unshift({text:body,author:'Christine',when:'Just now'});render();try{await sb.from('notes').insert({student_id:c.id,author_name:'Christine',body});logActivity(`Note added to ${c.name.split(' (')[0]}'s profile`,'Christine',c.id);}catch(e){toast('Failed to save note — '+(e.message||e));}}});}}
+function filterMap(f){if(f==='audit-pending')return'audit-pending';if(f==='checkin-due')return'checkin-due';if(f==='session-pending')return'session-pending';if(f==='payment-issue')return'payment-issue';if(f==='new')return'new';return'all';}
+state.loading=false; render();
+sb.auth.onAuthStateChange((event,newSession)=>{session=newSession;if(window.location.hash)history.replaceState(null,'',window.location.pathname);if(session){state.magicLinkSent=false;loadAll();}else{render();}});
+setInterval(async()=>{if(session&&!state.loading&&state.route.view==='communications'){try{const{data,error}=await sb.from('conversations').select('*, messages(*)').order('updated_at',{ascending:false});if(!error&&data){conversations=data.map(c=>({id:c.id,studentId:c.student_id,name:c.customer_name,status:c.status,unreadForAdmin:c.unread_for_admin,assigned:c.assigned_to,thread:(c.messages||[]).slice().sort((a,b)=>new Date(a.created_at)-new Date(b.created_at)).map(m=>({from:m.sender_type==='admin'?'team':'student',text:m.body,time:relTime(m.created_at)}))}));render();}}catch(e){}}},5000);
 </script>
 </body>
 </html>
