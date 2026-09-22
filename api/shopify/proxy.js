@@ -19,8 +19,11 @@ function html(res, status, body) {
 }
 
 function verifyProxy(req) {
-  const secret = process.env.SHOPIFY_API_SECRET;
-  if (!secret) throw new Error('SHOPIFY_API_SECRET is not configured.');
+  // Shopify calls this the client secret in current custom-app settings. Keep
+  // the older API-secret name as a backwards-compatible alias so existing
+  // deployments do not need a risky credential replacement.
+  const secret = process.env.SHOPIFY_CLIENT_SECRET || process.env.SHOPIFY_API_SECRET;
+  if (!secret) throw new Error('Shopify app secret is not configured.');
   const url = new URL(req.url, `https://${req.headers.host || 'localhost'}`);
   const signature = url.searchParams.get('signature');
   const timestamp = Number(url.searchParams.get('timestamp') || 0);
