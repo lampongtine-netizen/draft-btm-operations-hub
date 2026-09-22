@@ -1,5 +1,5 @@
 const crypto = require('crypto');
-const { supabase, readBody } = require('../_lib');
+const { supabase, readBody, json } = require('../_lib');
 
 function html(res, status, body) {
   res.statusCode = status;
@@ -64,24 +64,31 @@ function page(conversation, messages, customerId) {
 }
 
 module.exports = async (req, res) => {
+  const requestUrl = new URL(req.url, `https://${req.headers.host || 'localhost'}`);
+  const wantsJson = requestUrl.searchParams.get('format') === 'json' || String(req.headers.accept || '').includes('application/json');
   try {
+    console.log('[shopify/proxy] request', { method: req.method, wantsJson });
     const auth = verifyProxy(req);
-    if (!auth.ok) return html(res, auth.status, `<p>${auth.message}</p>`);
+    if (!auth.ok) return wantsJson ? json(res, auth.status, { error: auth.message }) : html(res, auth.status, `<p>${auth.message}</p>`);
     const customerId = auth.url.searchParams.get('logged_in_customer_id');
-    if (!customerId) return html(res, 401, '<p>Please log in to your BTM/Shopify account to use Messages.</p>');
+    if (!customerId) return wantsJson ? json(res, 401, { error: 'Please log in to your BTM/Shopify account to use Messages.' }) : html(res, 401, '<p>Please log in to your BTM/Shopify account to use Messages.</p>');
     const conversation = await ensureConversation(customerId);
     if (req.method === 'POST') {
       const body = await readBody(req);
-      const text = String(body.body || '').trim();
+      const text = String(body.body || body.message || '').trim();
       if (!text) return require('../_lib').json(res, 400, { error: 'Message cannot be empty.' });
-      await supabase('messages', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ conversation_id: conversation.id, sender_type: 'student', sender_name: 'Student', body: text }) });
-      await supabase(`conversations?id=eq.${encodeURIComponent(conversation.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ unread_for_admin: true, status: 'open' }) });
-      return require('../_lib').json(res, 200, { ok: true });
+      await supabase('messages', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ conversation_id: conversation.id, sender_type: 'student', sender_name: String(body.customer_name || 'Student').slice(0, 120), body: text }) });
+      await supabase(`conversations?id=eq.${encodeURIComponent(conversation.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ customer_name: body.customer_name || conversation.customer_name, customer_email: body.customer_email || conversation.customer_email, unread_for_admin: true, status: 'open', updated_at: new Date().toISOString() }) });
+      console.log('[shopify/proxy] student message saved', { customerId, conversationId: conversation.id });
+      return json(res, 200, { ok: true, conversationId: conversation.id });
     }
     const messages = await getMessages(conversation.id);
+    if (conversation.unread_for_student) await supabase(`conversations?id=eq.${encodeURIComponent(conversation.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ unread_for_student: false }) });
+    console.log('[shopify/proxy] messages loaded', { customerId, conversationId: conversation.id, count: messages.length });
+    if (wantsJson) return json(res, 200, { conversationId: conversation.id, messages });
     return html(res, 200, page(conversation, messages, customerId));
   } catch (e) {
-    console.error(e);
-    return html(res, 500, `<p>BTM Messages error: ${String(e.message || e)}</p>`);
+    console.error('[shopify/proxy] failed', { error: String(e.message || e), stack: e.stack });
+    return wantsJson ? json(res, 500, { error: 'Unable to process member messages.' }) : html(res, 500, `<p>BTM Messages error: ${String(e.message || e)}</p>`);
   }
 };
