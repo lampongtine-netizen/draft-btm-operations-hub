@@ -123,6 +123,36 @@ async function getMessages(conversationId) {
   return await supabase(`messages?conversation_id=eq.${encodeURIComponent(conversationId)}&select=id,sender_type,sender_name,body,created_at&order=created_at.asc`);
 }
 
+async function readProxyBody(req) {
+  const contentType = String(req.headers['content-type'] || '');
+  if (!contentType.toLowerCase().includes('multipart/form-data')) return await readBody(req);
+  if (req.body && typeof req.body === 'object' && !Buffer.isBuffer(req.body)) return req.body;
+
+  let raw;
+  if (Buffer.isBuffer(req.body)) raw = req.body.toString('binary');
+  else if (typeof req.body === 'string') raw = req.body;
+  else raw = await new Promise((resolve, reject) => {
+    const chunks = [];
+    req.on('data', chunk => chunks.push(Buffer.from(chunk)));
+    req.on('end', () => resolve(Buffer.concat(chunks).toString('binary')));
+    req.on('error', reject);
+  });
+
+  const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
+  if (!boundaryMatch) throw new Error('Invalid multipart message request.');
+  const boundary = boundaryMatch[1] || boundaryMatch[2];
+  const fields = {};
+  for (const part of raw.split(`--${boundary}`)) {
+    const separator = part.indexOf('\r\n\r\n');
+    if (separator < 0) continue;
+    const headers = part.slice(0, separator);
+    const name = headers.match(/name="([^"]+)"/i)?.[1];
+    if (!name || headers.match(/filename="/i)) continue;
+    fields[name] = part.slice(separator + 4).replace(/\r\n$/, '');
+  }
+  return fields;
+}
+
 function page(conversation, messages, customerId) {
   const safe = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const items = messages.map(m => `<div class="msg ${m.sender_type === 'admin' ? 'admin' : 'student'}"><div>${safe(m.body)}</div><small>${safe(m.sender_type === 'admin' ? 'BTM Team' : 'You')}</small></div>`).join('');
@@ -140,7 +170,7 @@ module.exports = async (req, res) => {
     if (!customerId) return wantsJson ? json(res, 401, { error: 'Please log in to your BTM/Shopify account to use Messages.' }) : html(res, 401, '<p>Please log in to your BTM/Shopify account to use Messages.</p>');
     const conversation = await ensureConversation(customerId);
     if (req.method === 'POST') {
-      const body = await readBody(req);
+      const body = await readProxyBody(req);
       const text = String(body.body || body.message || '').trim();
       if (!text) return require('../_lib').json(res, 400, { error: 'Message cannot be empty.' });
       await supabase('messages', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ conversation_id: conversation.id, sender_type: 'student', sender_name: String(body.customer_name || 'Student').slice(0, 120), body: text }) });
