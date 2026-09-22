@@ -1,6 +1,17 @@
 const crypto = require('crypto');
 const { supabase, readBody, json } = require('../_lib');
 
+// Shopify has two historical customer records for Donna Mae. The first key is
+// the account she actually uses to sign in; aliases are retained only so the
+// existing message history can be joined without deleting production data.
+const CUSTOMER_ALIASES = {
+  '10218638344499': {
+    ids: ['10235422114099'],
+    name: 'Donamae Morales',
+    email: 'moralesdnm17@gmail.com'
+  }
+};
+
 function html(res, status, body) {
   res.statusCode = status;
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -35,8 +46,63 @@ async function getConversation(customerId) {
   return rows[0] || null;
 }
 
+async function reconcileConversation(customerId) {
+  const identity = CUSTOMER_ALIASES[customerId];
+  if (!identity) return await getConversation(customerId);
+
+  let canonical = await getConversation(customerId);
+  for (const aliasId of identity.ids) {
+    const duplicate = await getConversation(aliasId);
+    if (!duplicate) continue;
+
+    if (!canonical) {
+      const updated = await supabase(`conversations?id=eq.${encodeURIComponent(duplicate.id)}`, {
+        method: 'PATCH',
+        headers: { Prefer: 'return=representation' },
+        body: JSON.stringify({ shopify_customer_id: customerId, customer_name: identity.name, customer_email: identity.email, status: 'open', updated_at: new Date().toISOString() })
+      });
+      canonical = updated[0] || duplicate;
+    } else if (duplicate.id !== canonical.id) {
+      await supabase(`messages?conversation_id=eq.${encodeURIComponent(duplicate.id)}`, {
+        method: 'PATCH',
+        headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify({ conversation_id: canonical.id })
+      });
+      const updated = await supabase(`conversations?id=eq.${encodeURIComponent(canonical.id)}`, {
+        method: 'PATCH',
+        headers: { Prefer: 'return=representation' },
+        body: JSON.stringify({
+          student_id: canonical.student_id || duplicate.student_id,
+          customer_name: identity.name,
+          customer_email: identity.email,
+          status: 'open',
+          unread_for_admin: Boolean(canonical.unread_for_admin || duplicate.unread_for_admin),
+          unread_for_student: Boolean(canonical.unread_for_student || duplicate.unread_for_student),
+          updated_at: new Date().toISOString()
+        })
+      });
+      canonical = updated[0] || canonical;
+      await supabase(`conversations?id=eq.${encodeURIComponent(duplicate.id)}`, {
+        method: 'PATCH',
+        headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify({ status: 'merged', unread_for_admin: false, unread_for_student: false, updated_at: new Date().toISOString() })
+      });
+    }
+
+    const studentId = canonical.student_id || duplicate.student_id;
+    if (studentId) {
+      await supabase(`students?id=eq.${encodeURIComponent(studentId)}`, {
+        method: 'PATCH',
+        headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify({ shopify_customer_id: customerId, name: identity.name, email: identity.email, updated_at: new Date().toISOString() })
+      });
+    }
+  }
+  return canonical;
+}
+
 async function ensureConversation(customerId) {
-  const existing = await getConversation(customerId);
+  const existing = await reconcileConversation(customerId);
   if (existing) return existing;
   const created = await supabase('conversations', {
     method: 'POST',
