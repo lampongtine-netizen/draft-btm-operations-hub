@@ -1,0 +1,380 @@
+{% liquid
+assign portal_preview = false
+if request.design_mode
+assign portal_preview = true
+endif
+assign level_one_member = false
+assign level_two_member = false
+assign btm_has_certificate = false
+if customer
+if customer.tags contains 'BTM Level 1'
+assign level_one_member = true
+endif
+if customer.tags contains 'BTM Business Advisory'
+assign level_one_member = true
+endif
+if customer.tags contains 'Business Advisory & Support'
+assign level_one_member = true
+endif
+if customer.tags contains 'BTM Graduate Support'
+assign level_one_member = true
+endif
+if customer.tags contains 'BTM Level 2'
+assign level_two_member = true
+endif
+if customer.tags contains 'BTM Scale Society'
+assign level_two_member = true
+endif
+if customer.tags contains 'Scale Society'
+assign level_two_member = true
+endif
+if customer.tags contains 'BTM Mentorship Graduate'
+assign btm_has_certificate = true
+endif
+if customer.tags contains 'BTM Graduate Support'
+assign btm_has_certificate = true
+endif
+endif
+assign portal_allowed = false
+if portal_preview
+assign portal_allowed = true
+endif
+if level_one_member
+assign portal_allowed = true
+endif
+if level_two_member
+assign portal_allowed = true
+endif
+assign btm_level_two = level_two_member
+assign member_name = 'BTM Member'
+assign member_initials = 'BM'
+assign member_business = blank
+assign support_space_name = 'private-support'
+if customer
+assign member_name = customer.first_name | append: ' ' | append: customer.last_name | strip
+if customer.first_name != blank
+assign first_initial = customer.first_name | slice: 0
+assign support_space_name = 'btm-' | append: customer.first_name | downcase | replace: ' ', '-'
+else
+assign first_initial = 'B'
+endif
+if customer.last_name != blank
+assign last_initial = customer.last_name | slice: 0
+else
+assign last_initial = 'M'
+endif
+assign member_initials = first_initial | append: last_initial | upcase
+if customer.metafields.btm.business_name.value != blank
+assign member_business = customer.metafields.btm.business_name.value
+endif
+endif
+if portal_preview
+assign portal_allowed = true
+assign member_name = 'Donamae Morales'
+assign member_initials = 'DM'
+assign member_business = 'Member'
+assign support_space_name = 'btm-donamae'
+endif
+%}
+<section
+id="btm-comms-v2-{{ section.id }}"
+class="btmcommsv2"
+data-member-id="{% if customer %}{{ customer.id }}{% else %}preview{% endif %}"
+data-member-name="{{ member_name | escape }}"
+data-member-initials="{{ member_initials | escape }}"
+data-support-space="{{ support_space_name | escape }}"
+>
+{% if portal_allowed %}
+<aside class="btmcommsv2__portal-side" aria-label="BTM Members Portal navigation">
+<button type="button" class="btmcommsv2__side-toggle" data-side-toggle aria-label="Minimise portal navigation" aria-expanded="true">
+<svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"></path></svg>
+</button>
+<div class="btmcommsv2__side-inner">
+<a href="/pages/btm-graduate-portal" class="btmcommsv2__side-brand">
+<strong>BTM</strong>
+<span>MEMBERS PORTAL</span>
+</a>
+<nav class="btmcommsv2__side-nav">
+<a href="/pages/btm-graduate-portal" class="btmcommsv2__side-link">
+<span class="btmcommsv2__side-icon"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6"></rect><rect x="14" y="4" width="6" height="6"></rect><rect x="4" y="14" width="6" height="6"></rect><rect x="14" y="14" width="6" height="6"></rect></svg></span>
+<span class="btmcommsv2__side-label">Dashboard</span>
+</a>
+<a href="/pages/btm-how-to-use" class="btmcommsv2__side-link">
+<span class="btmcommsv2__side-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M9.7 9a2.5 2.5 0 1 1 3.3 2.4c-.7.3-1 .8-1 1.6"></path><path d="M12 17h.01"></path></svg></span>
+<span class="btmcommsv2__side-label">How to Use</span>
+</a>
+<a href="/pages/btm-support-plan" class="btmcommsv2__side-link">
+<span class="btmcommsv2__side-icon"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"></path><path d="M15 3v5h4"></path><path d="M9 12h6M9 16h6"></path></svg></span>
+<span class="btmcommsv2__side-label">My Support Plan</span>
+</a>
+<a href="/pages/btm-monthly-check-in" class="btmcommsv2__side-link">
+<span class="btmcommsv2__side-icon"><svg viewBox="0 0 24 24"><path d="M5 8l3 3 4-6 4 6 3-3-2 12H7z"></path></svg></span>
+<span class="btmcommsv2__side-label">Monthly Check-In</span>
+</a>
+<a href="/pages/btm-power-sessions" class="btmcommsv2__side-link">
+<span class="btmcommsv2__side-icon"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="14" height="12" rx="2"></rect><path d="M17 10l4-2v8l-4-2"></path></svg></span>
+<span class="btmcommsv2__side-label">Power Sessions</span>
+</a>
+<a href="/pages/btm-communications" class="btmcommsv2__side-link is-active">
+<span class="btmcommsv2__side-icon"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"></path><path d="M8 9h8M8 12h6"></path></svg></span>
+<span class="btmcommsv2__side-label">Communications</span>
+</a>
+<a href="/pages/btm-resources" class="btmcommsv2__side-link">
+<span class="btmcommsv2__side-icon"><svg viewBox="0 0 24 24"><path d="M3 6h7l2 2h9v11H3z"></path></svg></span>
+<span class="btmcommsv2__side-label">Resources</span>
+</a>
+<a href="/pages/btm-scale-society" class="btmcommsv2__side-link">
+<span class="btmcommsv2__side-icon"><svg viewBox="0 0 24 24"><path d="M4 20V11M10 20V5M16 20v-8"></path><path d="M3 20h18"></path><path d="M15 5l2-2 4 4"></path></svg></span>
+<span class="btmcommsv2__side-label">Scale Society</span>
+<span class="btmcommsv2__side-badge">{% if btm_level_two %}LEVEL 2{% else %}LOCKED{% endif %}</span>
+</a>
+<a href="/pages/btm-educational-pathway" class="btmcommsv2__side-link">
+<span class="btmcommsv2__side-icon"><svg viewBox="0 0 24 24"><path d="M5 4h6a3 3 0 0 1 3 3v13a3 3 0 0 0-3-3H5z"></path><path d="M19 4h-5v16a3 3 0 0 1 3-3h2z"></path></svg></span>
+<span class="btmcommsv2__side-label">Education Pathway</span>
+</a>
+<a href="/pages/work-with-bree-1-1-mentorship-program" class="btmcommsv2__side-link">
+<span class="btmcommsv2__side-icon btmcommsv2__side-icon-text">1:1</span>
+<span class="btmcommsv2__side-label">1:1 Mentorship</span>
+</a>
+<a href="/pages/btm-unwritten-podcast" class="btmcommsv2__side-link">
+<span class="btmcommsv2__side-icon"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6"></path></svg></span>
+<span class="btmcommsv2__side-label">Unwritten Podcast</span>
+</a>
+{% if btm_has_certificate %}
+<a href="/pages/btm-certificate" class="btmcommsv2__side-link">
+<span class="btmcommsv2__side-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="4"></circle><path d="M9 13l-1 8 4-2 4 2-1-8"></path></svg></span>
+<span class="btmcommsv2__side-label">Certificate</span>
+</a>
+{% endif %}
+<a href="/pages/btm-my-details" class="btmcommsv2__side-link">
+<span class="btmcommsv2__side-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M5 21a7 7 0 0 1 14 0"></path></svg></span>
+<span class="btmcommsv2__side-label">My Details</span>
+</a>
+</nav>
+<div class="btmcommsv2__side-bottom">
+<a href="{{ routes.account_logout_url }}" class="btmcommsv2__side-link">
+<span class="btmcommsv2__side-icon"><svg viewBox="0 0 24 24"><path d="M10 5H5v14h5M13 8l4 4-4 4M8 12h9"></path></svg></span>
+<span class="btmcommsv2__side-label">Sign Out</span>
+</a>
+</div>
+</div>
+</aside>
+<button type="button" class="btmcommsv2__mobile-menu" data-mobile-menu aria-label="Open portal menu">
+<span></span><span></span><span></span>
+</button>
+<button type="button" class="btmcommsv2__overlay" data-overlay aria-label="Close menu"></button>
+<div class="btmcommsv2__main">
+<header class="btmcommsv2__topbar">
+<div class="btmcommsv2__top-left"><span>BTM BUSINESS ADVISORY &amp; SUPPORT</span><strong>Communications</strong></div>
+<div class="btmcommsv2__top-status"><i></i><div><strong>BTM Support</strong><small>Usually within a few hours · always within 1 business day</small></div></div>
+</header>
+<main class="btmcommsv2__workspace">
+<section class="btmcommsv2__chat">
+<div class="btmcommsv2__intro compact">
+<div><span class="btmcommsv2__eyebrow">YOUR PRIVATE SPACE</span><h1>Ask. Share. Keep moving.</h1></div>
+</div>
+<div class="btmcommsv2__welcome">
+<img src="https://cdn.shopify.com/s/files/1/0737/4523/6275/files/IMG_6145_1.jpg?v=1787222707" alt="Bree Wilkinson">
+<div><span>A NOTE FROM BREE</span><h2>Hey there! 👋 Welcome to your private support space.</h2><p>Send me anything you need help with in your business — questions, wins, quick decisions, offer feedback, marketing, sales, team, systems, strategy updates, screenshots, files, links, or just what feels stuck. No question is too big or too small. We’re here to support you.</p><strong>Bree xx</strong></div>
+</div>
+<div class="btmcommsv2__control-row">
+<div class="btmcommsv2__quick"><span>QUICK ACTIONS</span><div>
+<button type="button" data-prompt="I have a question about…">💬 Question</button>
+<button type="button" data-prompt="Quick business update: ">▤ Update</button>
+<button type="button" data-prompt="Could you please review this and let me know what you would change? ">⌕ Need Review</button>
+<button type="button" data-prompt="I need support deciding what to do about…">♧ Strategy Support</button>
+<button type="button" data-prompt="I need help with my marketing, content or promotion for…">◎ Marketing Help</button>
+<button type="button" data-prompt="Win to share ✨ ">☆ Win</button>
+</div></div>
+<div class="btmcommsv2__tools"><label>⌕ <input type="search" data-search placeholder="Search this conversation…"></label><button type="button" data-latest>Latest ↓</button></div>
+</div>
+<div class="btmcommsv2__messages" data-message-list>
+<div class="btmcommsv2__divider"><span>TODAY</span></div>
+<article class="btmcommsv2__message static">
+<img src="https://cdn.shopify.com/s/files/1/0737/4523/6275/files/IMG_6145_1.jpg?v=1787222707" alt="Bree Wilkinson">
+<div>
+<header><strong>Bree Wilkinson</strong><small>BTM Support</small></header>
+<p>Hey {{ member_name | escape }} 👋 This is your private space for anything you need help with in your business. Send questions, decisions, updates, screenshots, files or context below and we’ll pick it up here.</p>
+</div>
+</article>
+<article class="btmcommsv2__message static">
+<b class="avatar">BTM</b>
+<div>
+<header><strong>BTM Support Team</strong><small>Monday–Friday</small></header>
+<p>For the quickest help, tell us what is happening, what you have already tried, what outcome you want, and what you need help deciding.</p>
+</div>
+</article>
+</div>
+<div class="btmcommsv2__typing" data-live-status><b class="avatar">BTM</b><span>•••</span><small data-live-status-text>Connecting to your private support space…</small></div>
+<div class="btmcommsv2__composer">
+<textarea rows="2" data-message-input placeholder="Message Bree + BTM Support..."></textarea>
+<div class="btmcommsv2__selected" data-selected hidden></div>
+<div class="btmcommsv2__composerbar is-minimal" data-drop>
+<div class="btmcommsv2__composer-left">
+<button type="button" class="btmcommsv2__iconbtn" data-open-files aria-label="Attach file"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 12.5 14.9 6.1a3.2 3.2 0 0 1 4.5 4.5l-8.2 8.2a5 5 0 0 1-7.1-7.1l8.1-8.1"></path></svg></button>
+<button type="button" class="btmcommsv2__iconbtn" data-open-shot aria-label="Add screenshot"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="13" rx="2"></rect><circle cx="9" cy="10" r="1.5"></circle><path d="m6.5 16 3.2-3.2 2.3 2.2 2.7-3 2.8 4"></path></svg></button>
+<span class="btmcommsv2__composer-mini-note">Private member support</span>
+</div>
+<button type="button" class="btmcommsv2__send" data-send-message><span>SEND</span> ➢</button>
+</div>
+<input type="file" data-file-input multiple hidden accept=".png,.jpg,.jpeg,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt">
+<input type="file" data-shot-input multiple hidden accept="image/*">
+</div>
+<div class="btmcommsv2__note"><b>PRIVATE BTM SUPPORT</b><span data-send-note>Your message goes directly to Bree + the BTM Support Team. Replies will appear here.</span></div>
+</section>
+<aside class="btmcommsv2__rail">
+<section class="btmcommsv2__card response"><span class="clock">◷</span><div><small>RESPONSE TIME</small><h3>Usually within a few hours.</h3><p>Monday–Friday, and always within 1 business day.</p></div></section>
+<section class="btmcommsv2__card"><h2>☆ &nbsp;Best for</h2><ul><li>Business questions</li><li>Implementation help</li><li>Quick decisions or clarification</li><li>Offer, sales &amp; marketing feedback</li><li>Systems, team &amp; operations</li><li>Wins, updates &amp; accountability</li><li>Screenshots, files, links &amp; context</li></ul></section>
+<section class="btmcommsv2__card">
+<div class="btmcommsv2__cardhead"><h2>Conversation shortcuts</h2><button type="button" data-filter="all">View all</button></div>
+<div class="btmcommsv2__shortcuts">
+<button type="button" data-filter="files">▤ <span>Files</span><small data-cf>0</small></button>
+<button type="button" data-filter="media">▧ <span>Media</span><small data-cm>0</small></button>
+<button type="button" data-filter="links">↗ <span>Links</span><small data-cl>0</small></button>
+<button type="button" data-filter="wins">☆ <span>Wins</span><small data-cw>0</small></button>
+<button type="button" data-latest>↓ <span>Jump to latest</span><small>→</small></button>
+<a href="/pages/btm-resources">▣ <span>Resources</span><small>→</small></a>
+</div>
+</section>
+</aside>
+</main>
+</div>
+{% elsif customer %}
+<div class="btmcommsv2__access">
+<div>
+<span>BTM MEMBERS PORTAL</span>
+<h1>Your membership access is not active yet.</h1>
+<p>
+You’re signed in, but this account does not currently have active Business Advisory
+or Scale Society access.
+</p>
+<a href="/pages/contact-us">CONTACT THE BTM TEAM</a>
+</div>
+</div>
+{% else %}
+<div class="btmcommsv2__access">
+<div>
+<span>PRIVATE MEMBER SUPPORT</span>
+<h1>Sign in to open Communications.</h1>
+<p>
+Use the email address connected to your BTM membership to access your private support space.
+</p>
+<a href="/customer_authentication/login?return_to={{ '/pages/btm-communications' | url_encode }}">
+SIGN IN TO YOUR PORTAL
+</a>
+</div>
+</div>
+{% endif %}
+</section>
+<style>
+body:has(.btmcommsv2) .shopify-section-group-header-group,body:has(.btmcommsv2) .shopify-section-group-footer-group,body:has(.btmcommsv2) .announcement-bar,body:has(.btmcommsv2) .utility-bar,body:has(.btmcommsv2) .header-wrapper,body:has(.btmcommsv2) sticky-header,body:has(.btmcommsv2) footer,body:has(.btmcommsv2) .main-page-title{display:none!important}body:has(.btmcommsv2) #MainContent,body:has(.btmcommsv2) main{margin:0!important;padding:0!important}body:has(.btmcommsv2) .page-width{padding:0!important}.btmcommsv2{--black:#0e0e0e;--taupe:#b9a891;--soft:#eee8df;--ivory:#f2f1eb;--line:#ddd8d0;--muted:#756e67;--green:#55ae76;width:100%;min-height:100vh;background:radial-gradient(circle at 88% 2%,rgba(185,168,145,.12),transparent 23%),var(--ivory);color:#111;font-family:Roboto,Arial,sans-serif}.btmcommsv2 *{box-sizing:border-box}.btmcommsv2 a{color:inherit;text-decoration:none}.btmcommsv2 button,.btmcommsv2 textarea,.btmcommsv2 input{font:inherit}.btmcommsv2__portal-side{position:fixed;inset:0 auto 0 0;z-index:9990;width:268px;background:var(--black);color:#fff;transition:.22s}.btmcommsv2__side-inner{display:flex;flex-direction:column;height:100%}.btmcommsv2__side-brand{display:block;padding:44px 30px 38px}.btmcommsv2__side-brand strong{display:block;color:#fff!important;font-family:"Perfectly Nineties",Georgia,serif;font-size:36px;font-weight:400}.btmcommsv2__side-brand span{display:block;margin-top:9px;color:var(--taupe)!important;font-size:8px;font-weight:700;letter-spacing:.18em}.btmcommsv2__side-nav{flex:1;display:flex;flex-direction:column;gap:4px;min-height:0;padding:0 22px 28px;overflow:auto}.btmcommsv2__side-link{display:grid;grid-template-columns:32px minmax(0,1fr) auto;gap:12px;align-items:center;min-height:57px;padding:0 14px;color:#f2f1eb!important}.btmcommsv2__side-link:hover{background:#181818}.btmcommsv2__side-link.is-active{background:#202020}.btmcommsv2__side-icon{display:flex;align-items:center;justify-content:center;width:32px;height:32px;color:var(--taupe)}.btmcommsv2__side-icon-text{font-size:7px;font-weight:800}.btmcommsv2__side-icon svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.65}.btmcommsv2__side-label{font-family:"Perfectly Nineties",Georgia,serif;font-size:14px;white-space:nowrap}.btmcommsv2__side-badge{color:var(--taupe);font-size:6px;font-weight:700}.btmcommsv2__side-bottom{padding:9px 22px 20px;border-top:1px solid rgba(255,255,255,.08)}.btmcommsv2__side-toggle{position:absolute;top:31px;right:-15px;display:flex;align-items:center;justify-content:center;width:31px;height:31px;border:1px solid rgba(255,255,255,.14);border-radius:50%;background:#1c1c1c;color:var(--taupe)}.btmcommsv2__side-toggle svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2}.btmcommsv2__main{margin-left:268px;transition:.22s}body.btmcommsv2-nav-collapsed .btmcommsv2__portal-side{width:78px}body.btmcommsv2-nav-collapsed .btmcommsv2__main{margin-left:78px}body.btmcommsv2-nav-collapsed .btmcommsv2__side-brand{padding:47px 8px;text-align:center}body.btmcommsv2-nav-collapsed .btmcommsv2__side-brand strong{font-size:19px}body.btmcommsv2-nav-collapsed .btmcommsv2__side-brand span,body.btmcommsv2-nav-collapsed .btmcommsv2__side-label,body.btmcommsv2-nav-collapsed .btmcommsv2__side-badge{display:none}body.btmcommsv2-nav-collapsed .btmcommsv2__side-nav{padding:0 9px}body.btmcommsv2-nav-collapsed .btmcommsv2__side-link{display:flex;justify-content:center;padding:0}.btmcommsv2__mobile-menu{position:fixed;top:16px;left:15px;z-index:9996;display:none;width:42px;height:42px;border:0;border-radius:50%;background:#111}.btmcommsv2__mobile-menu span{display:block;width:17px;height:1.5px;margin:3px auto;background:#fff}.btmcommsv2__overlay{position:fixed;inset:0;z-index:9980;display:none;border:0;background:rgba(0,0,0,.42)}.btmcommsv2__topbar{display:flex!important;align-items:center;justify-content:space-between;min-height:78px;padding:13px clamp(28px,4vw,58px);border-bottom:1px solid var(--line);background:rgba(255,255,255,.94)}.btmcommsv2__top-left span{display:block;color:#8c765c;font-size:6px;font-weight:800;letter-spacing:.15em}.btmcommsv2__top-left strong{display:block;margin-top:4px;font-family:"Perfectly Nineties",Georgia,serif;font-size:20px;font-weight:400}.btmcommsv2__top-status{display:flex;align-items:center;gap:9px;padding:9px 12px;border:1px solid var(--line);border-radius:11px;background:#fff}.btmcommsv2__top-status i{width:9px;height:9px;border-radius:50%;background:var(--green)}.btmcommsv2__top-status strong{display:block;font-size:9px}.btmcommsv2__top-status small{display:block;margin-top:2px;color:var(--muted);font-size:7px}body:has(.btmcommsv2) main.btmcommsv2__workspace{display:grid!important;grid-template-columns:minmax(0,1fr) 340px;gap:20px;max-width:1600px;margin:0 auto!important;padding:24px clamp(24px,3vw,48px) 38px!important}.btmcommsv2__chat{min-width:0;overflow:hidden;border:1px solid var(--line);border-radius:18px;background:#fff;box-shadow:0 16px 42px rgba(38,29,21,.06)}.btmcommsv2__intro{display:flex;align-items:center;justify-content:space-between;gap:30px;padding:28px 28px 18px}.btmcommsv2__eyebrow,.btmcommsv2__card>small,.btmcommsv2__quick>span{color:#8c765c;font-size:7px;font-weight:800;letter-spacing:.17em}.btmcommsv2__intro h1{margin:7px 0 6px;font-family:"Perfectly Nineties",Georgia,serif;font-size:clamp(35px,3vw,48px);font-weight:400;line-height:1}.btmcommsv2__intro p{max-width:740px;margin:0;color:#4f4944;font-size:11px;line-height:1.55}.btmcommsv2__intro em{flex:none;color:#8c765c;font-family:"Perfectly Nineties",Georgia,serif;font-size:22px}.btmcommsv2__welcome{display:grid;grid-template-columns:128px minmax(0,1fr);margin:0 18px;overflow:hidden;border:1px solid #e3ddd4;border-radius:14px;background:linear-gradient(115deg,#f8f4ee,#eee5dc)}.btmcommsv2__welcome>img{width:100%;height:100%;min-height:132px;object-fit:cover}.btmcommsv2__welcome>div{padding:18px 22px}.btmcommsv2__welcome span{color:#8c765c;font-size:6px;font-weight:800;letter-spacing:.16em}.btmcommsv2__welcome h2{margin:5px 0 0;font-family:"Perfectly Nineties",Georgia,serif;font-size:25px;font-weight:400}.btmcommsv2__welcome p{max-width:760px;margin:8px 0;color:#5d5650;font-size:9px;line-height:1.55}.btmcommsv2__welcome>div>strong{font-family:"Perfectly Nineties",Georgia,serif;font-size:11px;font-weight:400}.btmcommsv2__quick{padding:15px 18px 5px}.btmcommsv2__quick>span{display:block;margin-bottom:8px}.btmcommsv2__quick>div{display:flex;flex-wrap:wrap;gap:7px}.btmcommsv2__quick button{min-height:34px;padding:0 12px;border:1px solid #ddd7cf;border-radius:999px;background:#fff;color:#34302c;font-size:7.5px;font-weight:700;cursor:pointer}.btmcommsv2__quick button:hover{border-color:var(--taupe);background:#f7f3ed}.btmcommsv2__tools{display:flex;justify-content:space-between;gap:10px;margin:9px 18px 0;padding-top:10px;border-top:1px solid #ebe7e0}.btmcommsv2__tools label{display:flex;align-items:center;gap:6px;width:min(360px,100%);padding:0 10px;border:1px solid #e0dbd3;border-radius:9px;background:#faf9f7}.btmcommsv2__tools input{width:100%;min-height:32px;border:0!important;outline:0!important;background:transparent!important;font-size:9px!important}.btmcommsv2__tools>button{padding:0 10px;border:1px solid #ded8d0;border-radius:8px;background:#fff;color:#5e5751;font-size:7px}.btmcommsv2__messages{min-height:330px;max-height:530px;padding:12px 18px 18px;overflow:auto;scroll-behavior:smooth}.btmcommsv2__divider{display:flex;align-items:center;gap:11px;margin:5px 0 13px}.btmcommsv2__divider:before,.btmcommsv2__divider:after{flex:1;height:1px;background:#ebe7e0;content:""}.btmcommsv2__divider span{font-size:6px;font-weight:800;letter-spacing:.13em;color:#8f867d}.btmcommsv2__message{display:grid;grid-template-columns:42px minmax(0,1fr);gap:11px;margin-bottom:7px;padding:7px 4px}.btmcommsv2__message[hidden]{display:none!important}.btmcommsv2__message>img,.btmcommsv2 .avatar{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;object-fit:cover;background:var(--taupe);font-size:8px}.btmcommsv2__message header{display:flex;gap:7px;align-items:baseline;margin-bottom:4px}.btmcommsv2__message header strong{font-size:9px}.btmcommsv2__message header small{color:#999189;font-size:7px}.btmcommsv2__message>div>p{display:inline-block;max-width:760px;margin:0;padding:10px 12px;border-radius:4px 12px 12px;background:#f2f0ec;color:#49433e;font-size:10.5px;line-height:1.55;white-space:pre-wrap}.btmcommsv2__message:first-of-type>div>p{background:linear-gradient(115deg,#f3ece6,#f1e4df)}.btmcommsv2__attach{display:flex;flex-wrap:wrap;gap:7px;margin-top:7px}.btmcommsv2__attach a,.btmcommsv2__attach span{display:flex;align-items:center;gap:7px;padding:7px 9px;border:1px solid #ddd7cf;border-radius:8px;background:#fff;font-size:7px}.btmcommsv2__attach img{width:38px;height:38px;object-fit:cover;border-radius:5px}.btmcommsv2__typing{display:flex;align-items:center;gap:7px;min-height:30px;padding:2px 20px 8px}.btmcommsv2__typing span{padding:6px 9px;border-radius:10px;background:#f2efeb;color:#8d8680}.btmcommsv2__typing small{font-size:7px;color:#857e77}.btmcommsv2__composer{margin:0 15px 15px;overflow:hidden;border:1px solid #cfc8c0;border-radius:12px;background:#fff;box-shadow:0 7px 22px rgba(38,28,20,.07)}.btmcommsv2__composer textarea{display:block;width:100%;min-height:58px;max-height:150px;padding:14px;border:0!important;outline:0!important;resize:none!important;font-size:11.5px!important}.btmcommsv2__selected{display:flex;flex-wrap:wrap;gap:6px;padding:0 11px 8px}.btmcommsv2__selected[hidden]{display:none!important}.btmcommsv2__selected span{display:inline-flex;align-items:center;gap:6px;padding:6px 8px;border:1px solid #ddd7cf;border-radius:7px;background:#f8f6f2;font-size:7px}.btmcommsv2__selected button{border:0;background:#e6dfd7;border-radius:50%}.btmcommsv2__composerbar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 9px 9px;border-top:1px solid #eee9e4}.btmcommsv2__drop{display:flex;align-items:center;gap:7px;color:#777068;font-size:7px}.btmcommsv2__drop button{padding:0;border:0;background:transparent;text-decoration:underline}.btmcommsv2__compose-actions{display:flex;align-items:center;gap:7px}.btmcommsv2__compose-actions>button{min-height:35px;padding:0 10px;border:0;border-radius:7px;background:transparent;font-size:7px;font-weight:700}.btmcommsv2__send{min-width:92px!important;height:39px!important;background:#111!important;color:#fff!important;font-size:8px!important}.btmcommsv2__note{display:flex;gap:15px;padding:11px 16px;border-top:1px solid var(--line);background:#faf9f7;font-size:7.5px;color:#766e67}.btmcommsv2__note b{color:#8c765c;font-size:6px;letter-spacing:.13em}.btmcommsv2__rail{display:flex;flex-direction:column;gap:13px}.btmcommsv2__card{padding:18px;border:1px solid var(--line);border-radius:14px;background:#fff}.btmcommsv2__card h2,.btmcommsv2__card h3{margin:5px 0 0;font-family:"Perfectly Nineties",Georgia,serif;font-weight:400}.btmcommsv2__card h2{font-size:21px}.btmcommsv2__card h3{font-size:20px}.btmcommsv2__card p{margin:6px 0 0;color:#645c55;font-size:8px;line-height:1.45}.btmcommsv2__card.response{display:grid;grid-template-columns:48px 1fr;gap:12px;align-items:center;background:linear-gradient(135deg,#f8f2eb,#efe4dc)}.clock{display:flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:50%;background:rgba(185,168,145,.18);color:#7c6751;font-size:28px}.btmcommsv2__people{display:flex;flex-direction:column;gap:8px;margin-top:13px}.btmcommsv2__people>div{display:grid;grid-template-columns:38px 1fr 8px;gap:9px;align-items:center;padding:8px 9px;border-radius:9px;background:#f8f6f3}.btmcommsv2__people img,.personbadge{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;object-fit:cover;background:var(--taupe);font-size:7px}.personbadge.member{background:#e6e1db}.btmcommsv2__people span b,.btmcommsv2__people span small{display:block}.btmcommsv2__people span b{font-size:8.5px}.btmcommsv2__people span small{margin-top:2px;color:#817a73;font-size:7px}.btmcommsv2__people i{width:7px;height:7px;border-radius:50%;background:var(--green)}.btmcommsv2__card ul{margin:12px 0 0;padding:0;list-style:none}.btmcommsv2__card li{margin:7px 0;padding-left:17px;color:#554f49;font-size:8.5px}.btmcommsv2__card li:before{margin-left:-17px;margin-right:8px;color:#8b755b;content:"✓"}.btmcommsv2__cardhead{display:flex;justify-content:space-between;gap:8px}.btmcommsv2__cardhead button{border:0;background:transparent;color:#8c765c;font-size:7px;text-decoration:underline}.btmcommsv2__shortcuts{margin-top:10px;border-top:1px solid #ebe7e0}.btmcommsv2__shortcuts button,.btmcommsv2__shortcuts a{display:grid;grid-template-columns:24px 1fr auto;gap:7px;align-items:center;width:100%;min-height:37px;border:0;border-bottom:1px solid #ebe7e0;background:transparent;color:#4d4742;font-size:8px;text-align:left}.btmcommsv2__shortcuts small{color:#938a82}.btmcommsv2__card.power{background:linear-gradient(135deg,#efe7dd,#f2e3df)}.btmcommsv2__card.power a{display:inline-block;margin-top:11px;font-size:7px;font-weight:800}.btmcommsv2__access{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:30px;background:#111}.btmcommsv2__access>div{max-width:620px;padding:55px;background:var(--ivory)}.btmcommsv2__access h1{font-family:"Perfectly Nineties",Georgia,serif;font-size:46px;font-weight:400}.btmcommsv2__access p{font-size:12px;line-height:1.65}.btmcommsv2__access a{display:inline-flex;margin-top:20px;padding:14px 18px;background:#111;color:#fff!important;font-size:8px;font-weight:800}@media(max-width:1120px) and (min-width:901px){.btmcommsv2__portal-side{width:230px}.btmcommsv2__main{margin-left:230px}body.btmcommsv2-nav-collapsed .btmcommsv2__portal-side{width:78px}body.btmcommsv2-nav-collapsed .btmcommsv2__main{margin-left:78px}body:has(.btmcommsv2) main.btmcommsv2__workspace{grid-template-columns:minmax(0,1fr) 290px;padding:20px!important}}@media(max-width:900px){.btmcommsv2__portal-side{width:min(286px,86vw)!important;transform:translateX(-105%)}.btmcommsv2__side-toggle{display:none}.btmcommsv2__main,body.btmcommsv2-nav-collapsed .btmcommsv2__main{margin-left:0}.btmcommsv2__mobile-menu{display:block}body.btmcommsv2-mobile-open .btmcommsv2__portal-side{transform:translateX(0)}body.btmcommsv2-mobile-open .btmcommsv2__overlay{display:block}.btmcommsv2__topbar{padding-left:68px}.btmcommsv2__top-status small{display:none}body:has(.btmcommsv2) main.btmcommsv2__workspace{display:block!important;padding:10px!important}.btmcommsv2__rail{display:grid;grid-template-columns:1fr 1fr;margin-top:10px}.btmcommsv2__card.response{grid-column:1/-1}}@media(max-width:620px){.btmcommsv2__top-left span,.btmcommsv2__top-status{display:none}body:has(.btmcommsv2) main.btmcommsv2__workspace{padding:0 0 18px!important}.btmcommsv2__chat{border-width:0 0 1px;border-radius:0}.btmcommsv2__intro{padding:22px 16px 13px}.btmcommsv2__intro h1{font-size:36px}.btmcommsv2__intro em{display:none}.btmcommsv2__welcome{grid-template-columns:88px 1fr;margin:0 10px}.btmcommsv2__welcome>div{padding:12px 11px}.btmcommsv2__welcome h2{font-size:20px}.btmcommsv2__quick{padding:12px 10px 4px}.btmcommsv2__quick>div{flex-wrap:nowrap;overflow:auto}.btmcommsv2__quick button{flex:none}.btmcommsv2__tools{margin:8px 10px 0}.btmcommsv2__messages{max-height:none;padding:12px 9px 16px}.btmcommsv2__composer{position:sticky;bottom:0;z-index:4;margin:0 8px 8px}.btmcommsv2__composer textarea{font-size:16px!important}.btmcommsv2__drop>span{max-width:170px}.btmcommsv2__compose-actions>button>span{display:none}.btmcommsv2__send{min-width:44px!important;width:44px!important}.btmcommsv2__rail{display:flex;flex-direction:column;padding:0 10px}}
+</style>
+<style>
+.btmcommsv2{--black:#000;--taupe:#B9A891;--ivory:#F2F1EB;--line:#d7d0c6;--muted:#5f5851;background:linear-gradient(180deg,#faf8f4 0%,#F2F1EB 100%);color:#1b1a18}
+.btmcommsv2__topbar{background:#fbfaf7;border-bottom-color:var(--line)}
+.btmcommsv2__top-status{background:#F2F1EB;border-color:#d8cfc4}
+.btmcommsv2__intro.compact{padding:20px 18px 10px}
+.btmcommsv2__intro.compact h1{margin:6px 0 0;font-size:clamp(27px,2.4vw,38px)}
+.btmcommsv2__welcome{grid-template-columns:112px minmax(0,1fr);background:linear-gradient(135deg,#f5f1eb,#eee6db);border-color:#d8cec0}
+.btmcommsv2__welcome>img{min-height:112px}
+.btmcommsv2__welcome>div{padding:14px 18px}
+.btmcommsv2__welcome h2{font-size:22px;line-height:1.06}
+.btmcommsv2__welcome p{margin:6px 0 7px;font-size:8.8px;line-height:1.5;color:#4e4841}
+.btmcommsv2__control-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,355px);gap:18px;align-items:end;margin:0 18px;padding:15px 0 10px;border-bottom:1px solid #e6dfd6}
+.btmcommsv2__control-row .btmcommsv2__quick{min-width:0;padding:0}.btmcommsv2__control-row .btmcommsv2__quick>span{display:block;margin-bottom:8px}
+.btmcommsv2__control-row .btmcommsv2__quick>div{display:flex;flex-wrap:wrap;gap:7px}
+.btmcommsv2__control-row .btmcommsv2__tools{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin:0;padding:0;border-top:0}
+.btmcommsv2__control-row .btmcommsv2__tools label{width:100%;min-width:0;min-height:34px}.btmcommsv2__control-row .btmcommsv2__tools>button{min-height:34px;padding:0 11px;white-space:nowrap}
+.btmcommsv2__messages{min-height:175px;max-height:265px;padding:12px 18px 10px}
+.btmcommsv2__message header strong{font-size:10px}.btmcommsv2__message header small{font-size:7.5px}
+.btmcommsv2__message>div>p{max-width:780px;padding:12px 14px;background:#f1ece6;color:#38332e;font-size:11px;line-height:1.58}.btmcommsv2__message:first-of-type>div>p{background:linear-gradient(135deg,#eee7df,#e9e0d7)}
+.btmcommsv2__rail{gap:12px}.btmcommsv2__card{border-color:var(--line)}
+.btmcommsv2__card.response{padding:14px;gap:10px;background:linear-gradient(135deg,#f5efe7,#ece3d8);border-color:#d8cec0}.btmcommsv2__card.response .clock{width:42px;height:42px;font-size:24px;background:rgba(185,168,145,.24);color:#6c5d4d}.btmcommsv2__card.response h3{font-size:17px;line-height:1.1;margin-top:2px}.btmcommsv2__card.response p{font-size:8px}
+.btmcommsv2__rail>.btmcommsv2__card:nth-child(2){min-height:275px;padding:20px 18px}.btmcommsv2__rail>.btmcommsv2__card:nth-child(2) h2{font-size:20px;margin-top:0}.btmcommsv2__rail>.btmcommsv2__card:nth-child(2) ul{margin-top:14px}.btmcommsv2__rail>.btmcommsv2__card:nth-child(2) li{margin:10px 0;padding-left:18px;font-size:10px;line-height:1.45;color:#3e3933}.btmcommsv2__rail>.btmcommsv2__card:nth-child(2) li:before{color:#B9A891;font-weight:700}
+.btmcommsv2__cardhead{display:flex;align-items:center;justify-content:space-between}.btmcommsv2__cardhead h2{margin:0;font-size:18px}.btmcommsv2__cardhead button{font-size:8px;color:#7f6d5a}
+.btmcommsv2__shortcuts{margin-top:12px}.btmcommsv2__shortcuts button,.btmcommsv2__shortcuts a{min-height:48px;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;padding:0 2px;font-size:10px;font-weight:600;color:#2f2c28}.btmcommsv2__shortcuts small{font-size:8px;color:#7e766e;font-weight:700}
+.btmcommsv2__composer{margin:12px 10px 16px;border:1px solid #cfc6bb;border-radius:14px;background:#f7f7f9;box-shadow:none}.btmcommsv2__composer textarea{min-height:66px;max-height:126px;padding:16px 18px 10px;background:transparent!important;color:#2f2b27!important;font-size:12px!important}
+.btmcommsv2__composerbar.is-minimal{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;border-top:1px solid #ddd6cd;background:#f7f7f9}.btmcommsv2__composer-left{display:flex;align-items:center;gap:10px;min-width:0}
+.btmcommsv2__iconbtn{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:32px!important;height:32px!important;flex:0 0 32px!important;padding:0!important;border:1px solid #d8cfc4!important;border-radius:9px!important;background:#fff!important;color:#5d5145!important;cursor:pointer!important}.btmcommsv2__iconbtn svg{width:16px!important;height:16px!important;fill:none!important;stroke:currentColor!important;stroke-width:1.65!important;stroke-linecap:round!important;stroke-linejoin:round!important}.btmcommsv2__iconbtn:hover{border-color:#B9A891!important;background:#F2F1EB!important;color:#000!important}
+.btmcommsv2__composer-mini-note{font-size:7px;color:#8a8177;white-space:nowrap}.btmcommsv2__send{min-width:102px!important;height:40px!important;background:#000!important;color:#fff!important;border-radius:10px!important}.btmcommsv2__send:hover{background:#B9A891!important;color:#111!important}.btmcommsv2__note{display:none}
+@media(max-width:1280px) and (min-width:901px){.btmcommsv2__control-row{grid-template-columns:minmax(0,1fr) 300px;gap:12px}}
+@media(max-width:900px){.btmcommsv2__control-row{display:block;margin:0 10px;padding:12px 0 10px}.btmcommsv2__control-row .btmcommsv2__quick>div{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.btmcommsv2__control-row .btmcommsv2__quick>div::-webkit-scrollbar{display:none}.btmcommsv2__control-row .btmcommsv2__quick button{flex:0 0 auto}.btmcommsv2__control-row .btmcommsv2__tools{margin-top:10px}.btmcommsv2__rail>.btmcommsv2__card:nth-child(2){min-height:auto;padding:18px 16px}}
+@media(max-width:620px){.btmcommsv2__welcome{grid-template-columns:88px minmax(0,1fr)}.btmcommsv2__welcome h2{font-size:18px}.btmcommsv2__welcome p{font-size:8.5px}.btmcommsv2__shortcuts button,.btmcommsv2__shortcuts a{font-size:9.5px;min-height:44px}.btmcommsv2__composer{margin:10px 8px 8px}.btmcommsv2__composer textarea{min-height:62px;font-size:16px!important}.btmcommsv2__send{min-width:84px!important;height:38px!important}.btmcommsv2__composer-mini-note{max-width:95px;overflow:hidden;text-overflow:ellipsis}}
+</style>
+<style>
+@media(min-width:901px){
+.btmcommsv2__control-row{grid-template-columns:minmax(0,1fr)245px!important;gap:14px!important;align-items:end!important;padding:16px 0 12px!important}
+.btmcommsv2__control-row .btmcommsv2__quick>span{margin-bottom:8px!important;font-size:7.5px!important}
+.btmcommsv2__control-row .btmcommsv2__quick>div{display:flex!important;flex-wrap:nowrap!important;gap:6px!important;width:100%!important;overflow:visible!important}
+.btmcommsv2__control-row .btmcommsv2__quick button{flex:1 1 auto!important;min-width:max-content!important;height:36px!important;min-height:36px!important;padding:0 10px!important;font-size:8px!important;font-weight:700!important;white-space:nowrap!important}
+.btmcommsv2__control-row .btmcommsv2__tools{grid-template-columns:minmax(0,1fr)auto!important;gap:8px!important;align-self:end!important}
+.btmcommsv2__control-row .btmcommsv2__tools label,.btmcommsv2__control-row .btmcommsv2__tools>button{height:36px!important;min-height:36px!important}
+.btmcommsv2__chat{display:flex!important;flex-direction:column!important;min-height:780px!important}
+.btmcommsv2__messages{flex:1 1 auto!important;min-height:245px!important;max-height:none!important}
+.btmcommsv2__welcome{grid-template-columns:112px minmax(0,1fr)!important}
+.btmcommsv2__welcome>img{width:112px!important;height:auto!important;max-width:none!important;min-height:0!important;object-fit:contain!important;justify-self:start!important}
+.btmcommsv2__welcome>div{min-height:145px!important;padding:13px 18px 9px!important}
+.btmcommsv2__welcome h2{margin-top:4px!important}.btmcommsv2__welcome p{margin:6px 0!important}.btmcommsv2__welcome>div>strong{display:block!important;margin-top:2px!important}
+}
+@media(max-width:900px){.btmcommsv2__messages{min-height:250px!important;max-height:none!important}}
+@media(max-width:620px){.btmcommsv2__welcome>img{width:88px!important;height:auto!important;max-width:none!important;min-height:0!important}.btmcommsv2__welcome>div{min-height:118px!important;padding-bottom:9px!important}}
+</style>
+<style>
+.btmcommsv2__welcome{overflow:hidden!important}
+.btmcommsv2__welcome>img{margin:0!important;border:0!important;border-radius:0!important}
+.btmcommsv2__shortcuts button.is-active{background:#F2F1EB!important;color:#000!important;font-weight:800!important}
+.btmcommsv2__inline-link{color:#6f5944!important;text-decoration:underline!important;text-underline-offset:2px!important;font-weight:600!important;cursor:pointer!important;overflow-wrap:anywhere!important}
+.btmcommsv2__inline-link:hover{color:#000!important}
+/* Live conversation alignment: BTM replies left, member messages right. */
+.btmcommsv2__message[data-live-message]{align-items:flex-start}
+.btmcommsv2__message[data-live-message]>.btmcommsv2__live-copy{min-width:0}
+.btmcommsv2__message.is-member-message{
+display:flex!important;
+justify-content:flex-end!important;
+gap:11px!important;
+width:100%!important;
+padding-left:12%!important;
+}
+.btmcommsv2__message.is-member-message>.avatar{order:2;flex:0 0 38px;background:#ded7ce!important}
+.btmcommsv2__message.is-member-message>.btmcommsv2__live-copy{
+order:1;
+display:flex;
+flex-direction:column;
+align-items:flex-end;
+max-width:78%;
+}
+.btmcommsv2__message.is-member-message header{justify-content:flex-end}
+.btmcommsv2__message.is-member-message>div>p{
+border-radius:12px 4px 12px 12px!important;
+background:#e8dfd4!important;
+color:#2f2a25!important;
+text-align:left!important;
+}
+.btmcommsv2__message.is-member-message .btmcommsv2__attach{justify-content:flex-end}
+.btmcommsv2__message.is-team-message>div>p{border-radius:4px 12px 12px!important}
+@media(max-width:620px){
+.btmcommsv2__message.is-member-message{padding-left:8%!important}
+.btmcommsv2__message.is-member-message>.btmcommsv2__live-copy{max-width:82%}
+.btmcommsv2__message.is-member-message>.avatar{flex-basis:33px}
+}
+</style>
+<script>
+(function(){
+var root=document.getElementById('btm-comms-v2-{{ section.id }}');if(!root)return;
+var q=function(s){return root.querySelector(s)},qa=function(s){return root.querySelectorAll(s)},side=q('[data-side-toggle]'),mob=q('[data-mobile-menu]'),ov=q('[data-overlay]'),input=q('[data-message-input]'),status=q('[data-live-status-text]'),note=q('[data-send-note]'),send=q('[data-send-message]'),list=q('[data-message-list]'),search=q('[data-search]'),fi=q('[data-file-input]'),si=q('[data-shot-input]'),sel=q('[data-selected]'),drop=q('[data-drop]'),files=[],currentMessages=[],filter='all',loading=false,lastSignature='',proxy='/apps/btm-messages',key='BTM_PORTAL_SIDEBAR_COLLAPSED';
+try{if(localStorage.getItem(key)==='true')document.body.classList.add('btmcommsv2-nav-collapsed')}catch(e){}
+if(side)side.onclick=function(){var c=document.body.classList.toggle('btmcommsv2-nav-collapsed');try{localStorage.setItem(key,c?'true':'false')}catch(e){}};
+if(mob)mob.onclick=function(){document.body.classList.add('btmcommsv2-mobile-open')};if(ov)ov.onclick=function(){document.body.classList.remove('btmcommsv2-mobile-open')};qa('.btmcommsv2__portal-side a').forEach(function(a){a.onclick=function(){document.body.classList.remove('btmcommsv2-mobile-open')}});
+function esc(v){var d=document.createElement('div');d.textContent=v==null?'':String(v);return d.innerHTML}function size(n){if(n<1024)return n+' B';if(n<1048576)return(n/1024).toFixed(1)+' KB';return(n/1048576).toFixed(1)+' MB'}function auto(){if(!input)return;input.style.height='auto';input.style.height=Math.min(input.scrollHeight,150)+'px'}if(input)input.oninput=auto;
+qa('[data-prompt]').forEach(function(b){b.onclick=function(){if(input){input.value=b.dataset.prompt||'';auto();input.focus()}}});
+function renderSel(){if(!sel)return;if(!files.length){sel.hidden=true;sel.innerHTML='';return}sel.hidden=false;sel.innerHTML=files.map(function(f,i){return'<span>'+esc(f.name)+' · '+size(f.size)+' <button type="button" data-rm="'+i+'">×</button></span>'}).join('');sel.querySelectorAll('[data-rm]').forEach(function(b){b.onclick=function(){files.splice(+b.dataset.rm,1);renderSel()}})}function add(fs){Array.from(fs||[]).forEach(function(f){if(f.size>4194304){if(note)note.textContent=f.name+' is larger than 4 MB.';return}if(files.length<5&&!files.some(function(x){return x.name===f.name&&x.size===f.size}))files.push(f)});renderSel()}
+qa('[data-open-files]').forEach(function(b){b.onclick=function(){if(fi)fi.click()}});qa('[data-open-shot]').forEach(function(b){b.onclick=function(){if(si)si.click()}});if(fi)fi.onchange=function(){add(fi.files);fi.value=''};if(si)si.onchange=function(){add(si.files);si.value=''};if(drop){['dragenter','dragover','dragleave','drop'].forEach(function(n){drop.addEventListener(n,function(e){e.preventDefault()})});drop.ondrop=function(e){add(e.dataTransfer.files)}}
+function fmt(v){if(!v)return'';var d=new Date(v);return isNaN(d)?'':d.toLocaleString([],{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'})}function atts(m){var a=[];['attachments','files','media'].forEach(function(k){if(Array.isArray(m[k]))a=a.concat(m[k])});return a}function isMedia(x){var t=String(x.type||x.mime_type||x.content_type||'').toLowerCase(),n=String(x.name||x.filename||x.title||'').toLowerCase();return /^(image|video|audio)\//.test(t)||/\.(png|jpe?g|gif|webp|svg|mp4|mov|m4v|webm|mp3|wav|m4a)$/i.test(n)}function tags(body,a){var t=[],s=String(body||'');if(a.some(function(x){return !isMedia(x)}))t.push('files');if(a.some(isMedia))t.push('media');if(/https?:\/\/|www\./i.test(s))t.push('links');if(/\b(win|won|milestone|celebrate|booked|record month)\b/i.test(s))t.push('wins');return t}function linkify(v){var safe=esc(v);return safe.replace(/((?:https?:\/\/|www\.)[^\s<]+)/gi,function(match){var trailing='',url=match;while(/[.,!?;:)\]]$/.test(url)){trailing=url.slice(-1)+trailing;url=url.slice(0,-1)}var href=/^www\./i.test(url)?'https://'+url:url;return'<a class="btmcommsv2__inline-link" href="'+href+'" target="_blank" rel="noopener noreferrer">'+url+'</a>'+trailing})}function attach(a){if(!a.length)return'';return'<div class="btmcommsv2__attach">'+a.map(function(x){var u=x.url||x.href||x.src||x.download_url||'',n=x.name||x.filename||x.title||'Attachment',m=isMedia(x),img=m&&/\.(png|jpe?g|gif|webp|svg)$/i.test(n),c=img&&u?'<img src="'+esc(u)+'" alt="">':(m?'▧':'▤');return u?'<a href="'+esc(u)+'" target="_blank" rel="noopener">'+c+'<span>'+esc(n)+'</span></a>':'<span>'+c+' '+esc(n)+'</span>'}).join('')+'</div>'}
+function apply(){if(!list)return;var s=search?search.value.trim().toLowerCase():'';list.querySelectorAll('.btmcommsv2__message').forEach(function(a){var ok=(!s||a.textContent.toLowerCase().includes(s))&&(filter==='all'||(a.dataset.tags||'').split(' ').includes(filter));if(a.classList.contains('static')&&filter!=='all')ok=false;a.hidden=!ok});qa('[data-filter]').forEach(function(b){b.classList.toggle('is-active',b.dataset.filter===filter)})}function counts(){var a=list?list.querySelectorAll('[data-live-message]'):[];function c(t){return Array.from(a).filter(function(x){return(x.dataset.tags||'').split(' ').includes(t)}).length}var f=q('[data-cf]'),m=q('[data-cm]'),l=q('[data-cl]'),w=q('[data-cw]');if(f)f.textContent=c('files');if(m)m.textContent=c('media');if(l)l.textContent=c('links');if(w)w.textContent=c('wins')}
+if(search)search.oninput=apply;qa('[data-filter]').forEach(function(b){b.onclick=function(){filter=b.dataset.filter||'all';apply();if(list)list.scrollIntoView({behavior:'smooth'})}});qa('[data-latest]').forEach(function(b){b.onclick=function(){filter='all';if(search)search.value='';apply();if(list)list.scrollTop=list.scrollHeight}});
+function render(ms,forceBottom){if(!list)return;ms=Array.isArray(ms)?ms:[];currentMessages=ms.slice();var signature=ms.map(function(m){return String(m.id||'')+'|'+String(m.updated_at||m.created_at||'')+'|'+String(m.body||m.message||m.content||'')+'|'+atts(m).length}).join('~');if(signature===lastSignature){if(status)status.textContent='BTM Support connected';return}var nearBottom=list.scrollHeight-list.scrollTop-list.clientHeight<90;lastSignature=signature;list.querySelectorAll('[data-live-message]').forEach(function(x){x.remove()});ms.forEach(function(m){var st=String(m.sender_type||'').toLowerCase(),profile=String(m.sender_profile||'').toLowerCase(),alignment=String(m.alignment||'').toLowerCase(),rawName=String(m.sender_name||''),me=alignment==='right'||profile==='student'||['student','member','customer'].includes(st),bree=!me&&(profile==='bree'||rawName.toLowerCase()==='bree wilkinson'),name=me?'You':(bree?'Bree Wilkinson':'BTM Support Team'),body=m.body||m.message||m.content||'',aa=atts(m),article=document.createElement('article');article.className='btmcommsv2__message '+(me?'is-member-message':'is-team-message')+(bree?' is-bree-message':'');article.dataset.liveMessage='true';article.dataset.tags=tags(body,aa).join(' ');var av=me?'<b class="avatar">{{ member_initials | escape }}</b>':bree?'<img src="https://cdn.shopify.com/s/files/1/0737/4523/6275/files/IMG_6145_1.jpg?v=1787222707" alt="Bree Wilkinson">':'<b class="avatar">BTM</b>',bodyHtml=body?'<p>'+linkify(body)+'</p>':'',copy='<div class="btmcommsv2__live-copy"><header><strong>'+esc(name)+'</strong><small>'+esc(fmt(m.created_at))+'</small></header>'+bodyHtml+attach(aa)+'</div>';article.innerHTML=av+copy;list.appendChild(article)});apply();counts();if(forceBottom||nearBottom)list.scrollTop=list.scrollHeight;if(status)status.textContent='BTM Support connected'}
+async function load(silent,forceBottom){if(loading)return;loading=true;try{if(!silent&&status)status.textContent='Loading your private conversation…';var r=await fetch(proxy+'?action=messages&_='+Date.now(),{credentials:'same-origin',headers:{Accept:'application/json','Cache-Control':'no-cache'},cache:'no-store'}),d=await r.json().catch(function(){return{}});if(!r.ok)throw Error(d.error||'Unable to load messages');render(d.messages||[],!!forceBottom)}catch(e){if(status)status.textContent=e.message||'Unable to connect';if(note)note.textContent='Your existing messages are still shown, but the latest refresh failed. Please check your connection and try again.'}finally{loading=false}}
+async function submit(){var msg=input?input.value.trim():'',pendingFiles=files.slice();if(!msg&&!pendingFiles.length){if(input)input.focus();return}if(send)send.disabled=true;if(input)input.disabled=true;if(status)status.textContent=pendingFiles.length?'Uploading and sending…':'Sending…';try{var opt={method:'POST',credentials:'same-origin',headers:{Accept:'application/json','Cache-Control':'no-cache'}},r;if(pendingFiles.length){var fd=new FormData();fd.append('message',msg);pendingFiles.forEach(function(f){fd.append('files[]',f,f.name)});opt.body=fd}else{opt.headers['Content-Type']='application/json';opt.body=JSON.stringify({message:msg})}r=await fetch(proxy+'?action=send&_='+Date.now(),opt);var d=await r.json().catch(function(){return{}});if(!r.ok)throw Error(d.error||'Unable to send message');if(input){input.value='';auto()}files=[];renderSel();lastSignature='';if(d.message){currentMessages=currentMessages.filter(function(m){return m.id!==d.message.id});currentMessages.push(d.message);render(currentMessages,true)}if(note)note.textContent='Message sent. Replies from Bree or the BTM Support Team will appear here.';setTimeout(function(){load(true,false)},250)}catch(e){if(note)note.textContent=(e.message||'Unable to send message')+'. Your draft and attachments have been kept so you can try again.'}finally{if(send)send.disabled=false;if(input){input.disabled=false;input.focus()}}}
+if(send)send.onclick=submit;if(input)input.onkeydown=function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();submit()}};load(false,true);var refreshTimer=setInterval(function(){if(!document.hidden)load(true,false)},4000);document.addEventListener('visibilitychange',function(){if(!document.hidden)load(true,false)});window.addEventListener('pagehide',function(){clearInterval(refreshTimer)},{once:true});
+})();
+</script>
