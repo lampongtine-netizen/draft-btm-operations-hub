@@ -23,6 +23,19 @@ const CUSTOMER_ALIASES = {
   }
 };
 
+function normalizeCustomerId(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const match = raw.match(/(?:gid:\/\/shopify\/Customer\/)?(\d+)$/i);
+  return match ? match[1] : raw;
+}
+
+function customerIdVariants(value) {
+  const normalized = normalizeCustomerId(value);
+  if (!normalized) return [];
+  return [...new Set([normalized, `gid://shopify/Customer/${normalized}`, String(value || '').trim()].filter(Boolean))];
+}
+
 function html(res, status, body) {
   res.statusCode = status;
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -56,13 +69,19 @@ function verifyProxy(req) {
 }
 
 async function getConversation(customerId) {
-  const rows = await supabase(`conversations?shopify_customer_id=eq.${encodeURIComponent(customerId)}&select=*&limit=1`);
-  return rows[0] || null;
+  for (const candidate of customerIdVariants(customerId)) {
+    const rows = await supabase(`conversations?shopify_customer_id=eq.${encodeURIComponent(candidate)}&select=*&limit=1`);
+    if (rows?.[0]) return rows[0];
+  }
+  return null;
 }
 
 async function getStudent(customerId) {
-  const rows = await supabase(`students?shopify_customer_id=eq.${encodeURIComponent(customerId)}&select=id,name,email&limit=1`);
-  return rows[0] || null;
+  for (const candidate of customerIdVariants(customerId)) {
+    const rows = await supabase(`students?shopify_customer_id=eq.${encodeURIComponent(candidate)}&select=id,name,email&limit=1`);
+    if (rows?.[0]) return rows[0];
+  }
+  return null;
 }
 
 async function linkConversationToStudent(conversation, customerId) {
@@ -88,11 +107,56 @@ async function linkConversationToStudent(conversation, customerId) {
 }
 
 async function reconcileConversation(customerId) {
+  customerId = normalizeCustomerId(customerId);
   const identity = CUSTOMER_ALIASES[customerId];
-  if (!identity) return await getConversation(customerId);
+  const matches = [];
 
-  let canonical = await getConversation(customerId);
-  if (canonical) return canonical;
+  for (const candidate of customerIdVariants(customerId)) {
+    const rows = await supabase(`conversations?shopify_customer_id=eq.${encodeURIComponent(candidate)}&select=*`);
+    for (const row of rows || []) if (!matches.some(existing => existing.id === row.id)) matches.push(row);
+  }
+
+  let canonical = matches.find(row => String(row.shopify_customer_id) === customerId) || matches[0] || null;
+  for (const duplicate of matches) {
+    if (!canonical || duplicate.id === canonical.id) continue;
+    await supabase(`messages?conversation_id=eq.${encodeURIComponent(duplicate.id)}`, {
+      method: 'PATCH',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({ conversation_id: canonical.id })
+    });
+    const canonicalNameIsGeneric = !canonical.customer_name || canonical.customer_name === 'BTM Student' || canonical.customer_name === 'Student';
+    const updated = await supabase(`conversations?id=eq.${encodeURIComponent(canonical.id)}`, {
+      method: 'PATCH',
+      headers: { Prefer: 'return=representation' },
+      body: JSON.stringify({
+        student_id: canonical.student_id || duplicate.student_id,
+        customer_name: canonicalNameIsGeneric ? duplicate.customer_name : canonical.customer_name,
+        customer_email: canonical.customer_email || duplicate.customer_email,
+        shopify_customer_id: customerId,
+        status: 'open',
+        unread_for_admin: Boolean(canonical.unread_for_admin || duplicate.unread_for_admin),
+        unread_for_student: Boolean(canonical.unread_for_student || duplicate.unread_for_student),
+        updated_at: new Date().toISOString()
+      })
+    });
+    canonical = updated[0] || canonical;
+    await supabase(`conversations?id=eq.${encodeURIComponent(duplicate.id)}`, {
+      method: 'PATCH',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({ status: 'merged', unread_for_admin: false, unread_for_student: false, updated_at: new Date().toISOString() })
+    });
+  }
+
+  if (canonical && String(canonical.shopify_customer_id) !== customerId) {
+    const normalized = await supabase(`conversations?id=eq.${encodeURIComponent(canonical.id)}`, {
+      method: 'PATCH',
+      headers: { Prefer: 'return=representation' },
+      body: JSON.stringify({ shopify_customer_id: customerId })
+    });
+    canonical = normalized[0] || canonical;
+  }
+
+  if (!identity || canonical) return canonical;
   for (const aliasId of identity.ids) {
     const duplicate = await getConversation(aliasId);
     if (!duplicate) continue;
@@ -144,6 +208,7 @@ async function reconcileConversation(customerId) {
 }
 
 async function ensureConversation(customerId) {
+  customerId = normalizeCustomerId(customerId);
   const existing = await reconcileConversation(customerId);
   if (existing) return await linkConversationToStudent(existing, customerId);
   const student = await getStudent(customerId);
