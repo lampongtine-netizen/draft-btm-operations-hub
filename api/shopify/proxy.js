@@ -49,6 +49,32 @@ async function getConversation(customerId) {
   return rows[0] || null;
 }
 
+async function getStudent(customerId) {
+  const rows = await supabase(`students?shopify_customer_id=eq.${encodeURIComponent(customerId)}&select=id,name,email&limit=1`);
+  return rows[0] || null;
+}
+
+async function linkConversationToStudent(conversation, customerId) {
+  if (!conversation) return conversation;
+  const student = await getStudent(customerId);
+  if (!student) return conversation;
+
+  const changes = {};
+  if (conversation.student_id !== student.id) changes.student_id = student.id;
+  if (student.name && (!conversation.customer_name || conversation.customer_name === 'BTM Student' || conversation.customer_name === 'Student')) {
+    changes.customer_name = student.name;
+  }
+  if (student.email && !conversation.customer_email) changes.customer_email = student.email;
+  if (!Object.keys(changes).length) return conversation;
+
+  const updated = await supabase(`conversations?id=eq.${encodeURIComponent(conversation.id)}`, {
+    method: 'PATCH',
+    headers: { Prefer: 'return=representation' },
+    body: JSON.stringify(changes)
+  });
+  return updated[0] || { ...conversation, ...changes };
+}
+
 async function reconcileConversation(customerId) {
   const identity = CUSTOMER_ALIASES[customerId];
   if (!identity) return await getConversation(customerId);
@@ -106,14 +132,16 @@ async function reconcileConversation(customerId) {
 
 async function ensureConversation(customerId) {
   const existing = await reconcileConversation(customerId);
-  if (existing) return existing;
+  if (existing) return await linkConversationToStudent(existing, customerId);
+  const student = await getStudent(customerId);
   const created = await supabase('conversations', {
     method: 'POST',
     headers: { Prefer: 'return=representation' },
     body: JSON.stringify({
       shopify_customer_id: customerId,
-      customer_name: 'BTM Student',
-      customer_email: null,
+      student_id: student?.id || null,
+      customer_name: student?.name || 'BTM Student',
+      customer_email: student?.email || null,
       status: 'open',
       unread_for_admin: false,
       unread_for_student: false
