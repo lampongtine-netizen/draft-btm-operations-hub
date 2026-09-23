@@ -1,5 +1,16 @@
 const crypto = require('crypto');
-const { supabase, readBody, json } = require('../_lib');
+const { supabase, readBody, json, storageUpload, storageSignedUrl } = require('../_lib');
+
+const ATTACHMENT_BUCKET = 'communication-attachments';
+const MAX_FILES = 5;
+const MAX_FILE_BYTES = 4 * 1024 * 1024;
+const ALLOWED_FILE_TYPES = new Set([
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+  'application/pdf', 'text/plain', 'text/csv', 'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+]);
 
 // Shopify has two historical customer records for Donna Mae. The first key is
 // the account she actually uses to sign in; aliases are retained only so the
@@ -56,6 +67,7 @@ async function getStudent(customerId) {
 
 async function linkConversationToStudent(conversation, customerId) {
   if (!conversation) return conversation;
+  if (conversation.student_id && conversation.customer_name && conversation.customer_name !== 'BTM Student' && conversation.customer_name !== 'Student' && conversation.customer_email) return conversation;
   const student = await getStudent(customerId);
   if (!student) return conversation;
 
@@ -80,6 +92,7 @@ async function reconcileConversation(customerId) {
   if (!identity) return await getConversation(customerId);
 
   let canonical = await getConversation(customerId);
+  if (canonical) return canonical;
   for (const aliasId of identity.ids) {
     const duplicate = await getConversation(aliasId);
     if (!duplicate) continue;
@@ -151,47 +164,76 @@ async function ensureConversation(customerId) {
 }
 
 async function getMessages(conversationId) {
-  const rows = await supabase(`messages?conversation_id=eq.${encodeURIComponent(conversationId)}&select=id,sender_type,sender_name,body,created_at&order=created_at.asc`);
-  return (rows || []).map(message => {
+  const rows = await supabase(`messages?conversation_id=eq.${encodeURIComponent(conversationId)}&select=id,sender_type,sender_name,body,attachments,created_at&order=created_at.asc`);
+  return await Promise.all((rows || []).map(async message => {
     const isStudent = message.sender_type === 'student';
     const isBree = !isStudent && String(message.sender_name || '').trim().toLowerCase() === 'bree wilkinson';
+    const attachments = await Promise.all((Array.isArray(message.attachments) ? message.attachments : []).map(async item => ({
+      ...item,
+      url: item.path ? await storageSignedUrl(ATTACHMENT_BUCKET, item.path, 3600) : null
+    })));
     return {
       ...message,
+      attachments,
       sender_name: isStudent ? (message.sender_name || 'Student') : (isBree ? 'Bree Wilkinson' : 'BTM Support Team'),
       sender_profile: isStudent ? 'student' : (isBree ? 'bree' : 'support'),
       alignment: isStudent ? 'right' : 'left'
     };
-  });
+  }));
 }
 
 async function readProxyBody(req) {
   const contentType = String(req.headers['content-type'] || '');
-  if (!contentType.toLowerCase().includes('multipart/form-data')) return await readBody(req);
-  if (req.body && typeof req.body === 'object' && !Buffer.isBuffer(req.body)) return req.body;
+  if (!contentType.toLowerCase().includes('multipart/form-data')) return { fields: await readBody(req), files: [] };
 
-  let raw;
-  if (Buffer.isBuffer(req.body)) raw = req.body.toString('binary');
-  else if (typeof req.body === 'string') raw = req.body;
-  else raw = await new Promise((resolve, reject) => {
+  let rawBuffer;
+  if (Buffer.isBuffer(req.body)) rawBuffer = req.body;
+  else if (typeof req.body === 'string') rawBuffer = Buffer.from(req.body, 'binary');
+  else rawBuffer = await new Promise((resolve, reject) => {
     const chunks = [];
     req.on('data', chunk => chunks.push(Buffer.from(chunk)));
-    req.on('end', () => resolve(Buffer.concat(chunks).toString('binary')));
+    req.on('end', () => resolve(Buffer.concat(chunks)));
     req.on('error', reject);
   });
 
   const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
   if (!boundaryMatch) throw new Error('Invalid multipart message request.');
   const boundary = boundaryMatch[1] || boundaryMatch[2];
+  const raw = rawBuffer.toString('binary');
   const fields = {};
+  const files = [];
   for (const part of raw.split(`--${boundary}`)) {
     const separator = part.indexOf('\r\n\r\n');
     if (separator < 0) continue;
     const headers = part.slice(0, separator);
     const name = headers.match(/name="([^"]+)"/i)?.[1];
-    if (!name || headers.match(/filename="/i)) continue;
-    fields[name] = part.slice(separator + 4).replace(/\r\n$/, '');
+    if (!name) continue;
+    const filename = headers.match(/filename="([^"]*)"/i)?.[1];
+    const content = part.slice(separator + 4).replace(/\r\n$/, '');
+    if (filename !== undefined) {
+      if (!filename) continue;
+      files.push({ field: name, name: filename, type: headers.match(/content-type:\s*([^\r\n]+)/i)?.[1]?.trim().toLowerCase() || 'application/octet-stream', buffer: Buffer.from(content, 'binary') });
+    } else {
+      fields[name] = Buffer.from(content, 'binary').toString('utf8');
+    }
   }
-  return fields;
+  return { fields, files };
+}
+
+function safeFileName(name) {
+  const cleaned = String(name || 'file').normalize('NFKD').replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(-120);
+  return cleaned || 'file';
+}
+
+async function uploadMessageFiles(conversationId, files) {
+  if (files.length > MAX_FILES) throw Object.assign(new Error(`You can attach up to ${MAX_FILES} files per message.`), { status: 400 });
+  return await Promise.all(files.map(async file => {
+    if (file.buffer.length > MAX_FILE_BYTES) throw Object.assign(new Error(`${file.name} is larger than 4 MB.`), { status: 400 });
+    if (!ALLOWED_FILE_TYPES.has(file.type)) throw Object.assign(new Error(`${file.name} is not a supported file type.`), { status: 400 });
+    const path = `${conversationId}/${Date.now()}-${crypto.randomBytes(8).toString('hex')}-${safeFileName(file.name)}`;
+    await storageUpload(ATTACHMENT_BUCKET, path, file.buffer, file.type);
+    return { path, name: file.name.slice(0, 180), type: file.type, size: file.buffer.length };
+  }));
 }
 
 function page(conversation, messages, customerId) {
@@ -214,13 +256,18 @@ module.exports = async (req, res) => {
     if (!customerId) return wantsJson ? json(res, 401, { error: 'Please log in to your BTM/Shopify account to use Messages.' }) : html(res, 401, '<p>Please log in to your BTM/Shopify account to use Messages.</p>');
     const conversation = await ensureConversation(customerId);
     if (req.method === 'POST') {
-      const body = await readProxyBody(req);
+      const parsed = await readProxyBody(req);
+      const body = parsed.fields;
+      const uploadFiles = parsed.files.filter(file => file.field === 'files[]' || file.field === 'files' || file.field === 'attachments');
       const text = String(body.body || body.message || '').trim();
-      if (!text) return require('../_lib').json(res, 400, { error: 'Message cannot be empty.' });
-      await supabase('messages', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ conversation_id: conversation.id, sender_type: 'student', sender_name: String(body.customer_name || 'Student').slice(0, 120), body: text }) });
+      if (!text && !uploadFiles.length) return json(res, 400, { error: 'Add a message or attachment before sending.' });
+      const attachments = await uploadMessageFiles(conversation.id, uploadFiles);
+      const createdRows = await supabase('messages', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ conversation_id: conversation.id, sender_type: 'student', sender_name: String(body.customer_name || 'Student').slice(0, 120), body: text, attachments }) });
       await supabase(`conversations?id=eq.${encodeURIComponent(conversation.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ customer_name: body.customer_name || conversation.customer_name, customer_email: body.customer_email || conversation.customer_email, unread_for_admin: true, status: 'open', updated_at: new Date().toISOString() }) });
-      console.log('[shopify/proxy] student message saved', { customerId, conversationId: conversation.id });
-      return json(res, 200, { ok: true, conversationId: conversation.id });
+      const created = createdRows?.[0] || {};
+      const responseAttachments = await Promise.all(attachments.map(async item => ({ ...item, url: await storageSignedUrl(ATTACHMENT_BUCKET, item.path, 3600) })));
+      console.log('[shopify/proxy] student message saved', { customerId, conversationId: conversation.id, attachments: attachments.length });
+      return json(res, 200, { ok: true, conversationId: conversation.id, message: { ...created, attachments: responseAttachments, sender_profile: 'student', alignment: 'right' } });
     }
     const messages = await getMessages(conversation.id);
     if (conversation.unread_for_student) await supabase(`conversations?id=eq.${encodeURIComponent(conversation.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ unread_for_student: false }) });
@@ -229,6 +276,12 @@ module.exports = async (req, res) => {
     return html(res, 200, page(conversation, messages, customerId));
   } catch (e) {
     console.error('[shopify/proxy] failed', { error: String(e.message || e), stack: e.stack });
-    return wantsJson ? json(res, 500, { error: 'Unable to process member messages.' }) : html(res, 500, `<p>BTM Messages error: ${String(e.message || e)}</p>`);
+    const status = e.status || 500;
+    const message = status < 500 ? String(e.message || e) : 'Unable to process member messages.';
+    return wantsJson ? json(res, status, { error: message }) : html(res, status, `<p>BTM Messages error: ${safeError(message)}</p>`);
   }
 };
+
+function safeError(value) {
+  return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
