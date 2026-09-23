@@ -11,6 +11,19 @@ function clean(value) {
   return value == null ? '' : String(value).trim();
 }
 
+function normalizeShopifyCustomerId(value) {
+  const raw = clean(value);
+  if (!raw) return '';
+  const match = raw.match(/(?:gid:\/\/shopify\/Customer\/)?(\d+)$/i);
+  return match ? match[1] : raw;
+}
+
+function shopifyCustomerIdVariants(value) {
+  const normalized = normalizeShopifyCustomerId(value);
+  if (!normalized) return [];
+  return [...new Set([normalized, `gid://shopify/Customer/${normalized}`, clean(value)].filter(Boolean))];
+}
+
 function programDetails(value) {
   const raw = clean(value);
   const key = raw.toLowerCase();
@@ -53,8 +66,10 @@ function moneyAmount(value) {
 
 async function findStudent(shopifyCustomerId, email) {
   if (shopifyCustomerId) {
-    const rows = await supabase(`students?shopify_customer_id=eq.${encodeURIComponent(shopifyCustomerId)}&select=*&limit=1`);
-    if (rows?.[0]) return rows[0];
+    for (const candidate of shopifyCustomerIdVariants(shopifyCustomerId)) {
+      const rows = await supabase(`students?shopify_customer_id=eq.${encodeURIComponent(candidate)}&select=*&limit=1`);
+      if (rows?.[0]) return rows[0];
+    }
   }
 
   if (email) {
@@ -66,7 +81,7 @@ async function findStudent(shopifyCustomerId, email) {
 }
 
 async function saveStudent(existing, body, details, active, now) {
-  const shopifyCustomerId = clean(body.shopifyCustomerId);
+  const shopifyCustomerId = normalizeShopifyCustomerId(body.shopifyCustomerId);
   const email = clean(body.email).toLowerCase();
   const name = clean(body.name) || existing?.name || email || 'BTM Member';
   const record = {
@@ -107,7 +122,7 @@ async function savePayment(body, student, active) {
     external_event_id: eventId,
     event_type: clean(body.eventType) || 'payment.updated',
     student_id: student.id,
-    shopify_customer_id: clean(body.shopifyCustomerId) || null,
+    shopify_customer_id: normalizeShopifyCustomerId(body.shopifyCustomerId) || null,
     stripe_customer_id: clean(body.stripeCustomerId) || null,
     stripe_subscription_id: clean(body.stripeSubscriptionId) || null,
     payment_status: clean(body.paymentStatus) || null,
@@ -151,11 +166,15 @@ async function saveEntitlement(body, student, details, active, now) {
 }
 
 async function linkConversation(body, student) {
-  const shopifyCustomerId = clean(body.shopifyCustomerId);
+  const shopifyCustomerId = normalizeShopifyCustomerId(body.shopifyCustomerId);
   if (!shopifyCustomerId) return;
 
   const path = `conversations?shopify_customer_id=eq.${encodeURIComponent(shopifyCustomerId)}&select=id&limit=1`;
-  const rows = await supabase(path);
+  let rows = [];
+  for (const candidate of shopifyCustomerIdVariants(body.shopifyCustomerId)) {
+    rows = await supabase(`conversations?shopify_customer_id=eq.${encodeURIComponent(candidate)}&select=id&limit=1`);
+    if (rows?.[0]) break;
+  }
   const record = {
     student_id: student.id,
     customer_name: student.name,
