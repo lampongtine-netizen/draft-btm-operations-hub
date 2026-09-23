@@ -154,22 +154,42 @@ async function linkConversation(body, student) {
   const shopifyCustomerId = clean(body.shopifyCustomerId);
   if (!shopifyCustomerId) return;
 
+  const path = `conversations?shopify_customer_id=eq.${encodeURIComponent(shopifyCustomerId)}&select=id&limit=1`;
+  const rows = await supabase(path);
   const record = {
     student_id: student.id,
     customer_name: student.name,
     customer_email: student.email,
-    shopify_customer_id: shopifyCustomerId,
-    status: 'open'
+    shopify_customer_id: shopifyCustomerId
   };
 
-  // Stripe can deliver multiple events for the same payment at nearly the
-  // same time. Upsert on Shopify's customer ID so concurrent requests update
-  // one conversation instead of racing to insert duplicate rows.
-  await supabase('conversations?on_conflict=shopify_customer_id', {
-    method: 'POST',
-    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify(record)
-  });
+  if (rows?.[0]) {
+    await supabase(`conversations?id=eq.${encodeURIComponent(rows[0].id)}`, {
+      method: 'PATCH',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify(record)
+    });
+    return;
+  }
+
+  try {
+    await supabase('conversations', {
+      method: 'POST',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({ ...record, status: 'open' })
+    });
+  } catch (error) {
+    // A second Stripe event can insert the conversation after our lookup.
+    // Treat that duplicate as success and update the row that won the race.
+    if (error.status !== 409 && !/duplicate key/i.test(error.message || '')) throw error;
+    const concurrentRows = await supabase(path);
+    if (!concurrentRows?.[0]) throw error;
+    await supabase(`conversations?id=eq.${encodeURIComponent(concurrentRows[0].id)}`, {
+      method: 'PATCH',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify(record)
+    });
+  }
 }
 
 module.exports = async function handler(req, res) {
