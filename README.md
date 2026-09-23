@@ -16,10 +16,28 @@ This version preserves the existing BTM Operations HQ frontend and adds a real s
 - Supabase service-role key is only used inside Vercel serverless functions.
 - Browser code never receives the service-role key.
 - Admin API routes require an HttpOnly signed session cookie.
-- Shopify customer authentication is intentionally NOT implemented yet. Do not trust a raw customer ID from the browser as authorization.
+- Shopify student messaging is authenticated server-side through the app proxy's verified `logged_in_customer_id`.
 
-## Next integration
+## Paid membership automation
 
-The Shopify student Communications page should be changed only after this backend is verified. The student side should authenticate the Shopify customer server-side (for example through a Shopify app/app-proxy flow) before reading or writing that customer's conversation.
+`POST /api/shopify/order-paid` accepts Shopify's `orders/paid` webhook. It verifies
+the Shopify HMAC before it writes anything. For the supported membership products it:
+
+- creates or updates the Operations HQ student;
+- records the payment and access entitlement;
+- creates and links the student's retained conversation; and
+- applies the Shopify customer tags used by the Liquid portal access checks.
+
+Required production environment variables:
+
+- `SHOPIFY_CLIENT_SECRET` (also used by the existing app proxy)
+- `SHOPIFY_ADMIN_ACCESS_TOKEN` with customer write access
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+Register an `orders/paid` webhook in the existing Shopify custom app with the
+production URL `https://draft-btm-operations-hub.vercel.app/api/shopify/order-paid`
+and JSON format. Shopify customer accounts must be collected for membership
+orders because the portal and messages are tied to `logged_in_customer_id`.
 
 Shopify Inbox is not used as the database or API for this implementation.
