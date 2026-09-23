@@ -55,6 +55,53 @@ function supabaseConfig() {
   return { url: url.replace(/\/$/, ''), key };
 }
 
+function encodeStoragePath(path) {
+  return String(path || '').split('/').map(encodeURIComponent).join('/');
+}
+
+async function storageUpload(bucket, path, buffer, contentType) {
+  const { url, key } = supabaseConfig();
+  const response = await fetch(`${url}/storage/v1/object/${encodeURIComponent(bucket)}/${encodeStoragePath(path)}`, {
+    method: 'POST',
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      'Content-Type': contentType || 'application/octet-stream',
+      'x-upsert': 'false'
+    },
+    body: buffer
+  });
+  const text = await response.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+  if (!response.ok) {
+    const message = data?.message || data?.error || `Storage upload failed (${response.status})`;
+    const err = new Error(message);
+    err.status = response.status;
+    throw err;
+  }
+  return data;
+}
+
+async function storageSignedUrl(bucket, path, expiresIn = 3600) {
+  const { url, key } = supabaseConfig();
+  const response = await fetch(`${url}/storage/v1/object/sign/${encodeURIComponent(bucket)}/${encodeStoragePath(path)}`, {
+    method: 'POST',
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ expiresIn })
+  });
+  const text = await response.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+  if (!response.ok) throw new Error(data?.message || data?.error || `Could not create file link (${response.status})`);
+  const signed = data?.signedURL || data?.signedUrl;
+  return signed ? `${url}/storage/v1${signed.startsWith('/') ? signed : `/${signed}`}` : null;
+}
+
 async function supabase(path, options = {}) {
   const { url, key } = supabaseConfig();
   const headers = {
@@ -97,4 +144,4 @@ function clearSessionCookie(res) {
   res.setHeader('Set-Cookie', 'btm_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0');
 }
 
-module.exports = { json, getSession, requireAdmin, supabase, readBody, setSessionCookie, clearSessionCookie };
+module.exports = { json, getSession, requireAdmin, supabase, readBody, setSessionCookie, clearSessionCookie, storageUpload, storageSignedUrl };
